@@ -1,0 +1,181 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// --- ENUMS ---
+// Strict roles enforcing your access control matrix
+enum Role {
+  ADMIN
+  MANAGEMENT
+  EXAMINER
+  SALES
+  OPERATIONS
+  HR
+}
+
+// Strict branches to segment data
+enum Branch {
+  BRANCH_A
+  BRANCH_B
+  BRANCH_C
+  MASTER // For Admin/Management/Examiner who see everything
+}
+
+// --- MODELS ---
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String   // Will store hashed passwords
+  role      Role
+  branch    Branch
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations: Tracking who handled the lead at what stage
+  salesLeads      Lead[] @relation("SalesRepresentative")
+  operationsLeads Lead[] @relation("OperationsRepresentative")
+  hrLeads         Lead[] @relation("HRRepresentative")
+  activities      ActivityLog[]
+  notifications   Notification[]
+}
+
+model Lead {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  branch          Branch   // Dictates which branch owns this lead
+  activities      ActivityLog[]
+
+  // ----------------------------------------------------
+  // FIRST PAGE INFO (Visible to Sales, Ops, HR, Examiner)
+  // ----------------------------------------------------
+  leadDate         DateTime @default(now())
+  leadSource       String   // Facebook, TikTok, WhatsApp, Referral, Others
+  leadSourceOther  String?  // If 'Others' is selected
+  category         String   // Bus Driver, Trailer Driver, Mechanics, Others
+  categoryOther    String?  // If 'Others' is selected
+  countryPreferred String   // Latvia, Romania, Croatia, Others
+  countryOther     String?  // If 'Others' is selected
+  slotBookingDate  DateTime?
+  testDate         DateTime?
+  
+  // Personal Information
+  givenName        String
+  surname          String
+  dob              DateTime?
+  fatherName       String?
+  passportNum      String?
+  passportExpiry   DateTime?
+  nationality      String?
+  email            String?
+  callingNumber    String?
+  whatsappNumber   String?
+  dlNumber         String?
+  dlExpiry         DateTime?
+  residentIdNum    String?
+  residentIdExp    DateTime?
+  homeCountryNumber String?
+  experienceHome    Int?
+  experienceGCC     Int?
+  previousAgency    String?
+  previousCountry   String?
+  homeAddress      String?
+  companyAddress   String?
+  passportIssueDate   DateTime?
+  dlIssueDate         DateTime?
+  residentIdIssueDate DateTime?
+
+  // ----------------------------------------------------
+  // STAGE 1: SALES PROCESSING
+  // ----------------------------------------------------
+  feedbackStatus   String?  // Converted, Not Responding, Not Eligible, etc.
+  salesRemarks     String?
+
+  // ----------------------------------------------------
+  // STAGE 2: OPERATIONS & HR PROCESSING
+  // ----------------------------------------------------
+  caseStatus       String   @default("Stage 1 Under Process")
+  
+  // Payment Details
+  testFeesAmount          Float?
+  totalPayment            Float?
+  serviceAgreementPending Float?
+  jobOfferPending         Float?
+  workPermitPending       Float?
+  insurancePending        Float?
+  schoolFeesPending       Float?
+  flightTicketPending     Float? // From HR view
+  invoiceNumber           String?
+  paymentDate             DateTime?
+
+  // Follow-up Details
+  lastCallDate      DateTime?
+  followUpDate      DateTime?
+  followUpRemarks   String?    @db.Text
+  lastEmailDate     DateTime?
+  caseRemarks       String?    @db.Text
+
+  // ----------------------------------------------------
+  // DOCUMENTS (Operations & HR)
+  // ----------------------------------------------------
+  // Using JSON is the most scalable way to store checklists and URLs 
+  // without creating 40+ individual database columns.
+  documentStatus    Json     @default("{}") // e.g., { passportPending: true, cvUploaded: true }
+  documentFiles     Json     @default("{}") // e.g., { passportUrl: "https://...", cvUrl: "https://..." }
+
+  // ----------------------------------------------------
+  // STAGE 3: EXAMINER
+  // ----------------------------------------------------
+  englishScore      Int?
+  drivingScore      Int?
+  englishTestResult String?  // Passed / Failed / Practice Required
+  yardTestResult    String?  // Passed / Failed / Practice Required
+  examinerStatus    String?  // "Approved", "Denied", "Pending"
+  examinerRemarks   String?  @db.Text
+
+  // ----------------------------------------------------
+  // ASSIGNMENTS
+  // ----------------------------------------------------
+  salesRepId        String?
+  salesRep          User?    @relation("SalesRepresentative", fields: [salesRepId], references: [id])
+  
+  opsRepId          String?
+  opsRep            User?    @relation("OperationsRepresentative", fields: [opsRepId], references: [id])
+  
+  hrRepId           String?
+  hrRep             User?    @relation("HRRepresentative", fields: [hrRepId], references: [id])
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  leadId    String
+  userId    String
+  action    String   
+  details   String?  
+  createdAt DateTime @default(now())
+
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String   // The user receiving the alert
+  title     String
+  message   String
+  link      String?  // The URL to jump to (e.g., the lead's profile)
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
