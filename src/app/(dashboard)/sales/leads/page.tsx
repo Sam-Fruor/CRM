@@ -36,13 +36,14 @@ export default async function LeadsWorkspacePage({ searchParams }: { searchParam
     displayLeads = allLeads.filter(l => l.caseStatus !== "Stage 1 Under Process");
   }
 
-  // 2. Apply Search Filter
+// 2. Apply Search Filter
   if (searchQuery) {
     const q = searchQuery.toLowerCase();
     displayLeads = displayLeads.filter(l => 
-      l.givenName.toLowerCase().includes(q) || 
-      l.surname.toLowerCase().includes(q) || 
-      l.callingNumber.includes(q)
+      (l.givenName || "").toLowerCase().includes(q) || 
+      (l.surname || "").toLowerCase().includes(q) || 
+      (l.callingNumber || "").includes(q) || 
+      (l.id || "").toLowerCase().includes(q) // 👈 Changed to includes() so partial IDs work!
     );
   }
 

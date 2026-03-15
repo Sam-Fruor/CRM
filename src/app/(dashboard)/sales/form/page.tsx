@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createLead } from "@/app/actions/leadActions";
+import { createLead, checkDuplicateLead } from "@/app/actions/leadActions";
 
 const COUNTRY_LIST = [
   "Bahrain", "Bangladesh", "Croatia", "Egypt", "India", 
@@ -17,7 +17,7 @@ export default function NewLeadPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   
-  // Track if the user has typed anything
+  // Track if the user has typed anything for the warnings
   const [isDirty, setIsDirty] = useState(false);
   
   const [dob, setDob] = useState("");
@@ -29,19 +29,28 @@ export default function NewLeadPage() {
   const [category, setCategory] = useState("");
   const [countryPreferred, setCountryPreferred] = useState("");
 
-  // 🛑 WARN BEFORE LEAVING IF THERE ARE UNSAVED CHANGES
+  // 🔎 LIVE FORM DATA TRACKER (For Duplicate Scanner)
+  const [formDataTracker, setFormDataTracker] = useState({
+    callingNumber: "",
+    passportNum: ""
+  });
+
+  // 🚨 DUPLICATE ALERT STATE
+  const [duplicateAlert, setDuplicateAlert] = useState<{message: string} | null>(null);
+
+  // 🛑 1. WARN BEFORE LEAVING (Native Browser Refresh/Close)
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (isDirty) {
         e.preventDefault();
-        e.returnValue = ""; // This triggers the browser's native warning prompt
+        e.returnValue = "";
       }
     };
-
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [isDirty]);
 
+  // 🛑 2. GLOBAL CLICK WARNING (Next.js Sidebar Links & Sign Out)
   useEffect(() => {
     const handleGlobalClick = (e: MouseEvent) => {
       if (!isDirty) return;
@@ -50,24 +59,53 @@ export default function NewLeadPage() {
       const anchor = target.closest("a");
       const button = target.closest("button");
 
-      // Ignore clicks on our own form buttons (Submit & Cancel)
+      // Ignore our own form buttons
       if (button && (button.type === "submit" || button.id === "cancel-button")) {
         return;
       }
 
-      // If they click a link in the sidebar or the Sign Out button
       if (anchor || button) {
         if (!window.confirm("You have unsaved changes. Are you sure you want to leave this page?")) {
-          e.preventDefault();  // Stops the link from working
-          e.stopPropagation(); // Stops NextAuth signOut from firing
+          e.preventDefault();
+          e.stopPropagation();
         }
       }
     };
 
-    // 'capture: true' grabs the click BEFORE Next.js gets to route it
     document.addEventListener("click", handleGlobalClick, { capture: true });
     return () => document.removeEventListener("click", handleGlobalClick, { capture: true });
   }, [isDirty]);
+
+  // 🛑 3. THE GLOBAL DUPLICATE SCANNER
+  useEffect(() => {
+    const phone = formDataTracker.callingNumber;
+    const passport = formDataTracker.passportNum;
+
+    if (!phone && !passport) {
+      setDuplicateAlert(null);
+      return;
+    }
+
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        // Call the Server Action directly
+        const data = await checkDuplicateLead(phone, passport);
+
+        if (data?.duplicate) {
+          setDuplicateAlert({
+            message: `Client already exists in ${data.branch} under ID: ${data.shortId}`
+          });
+        } else {
+          setDuplicateAlert(null);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }, 500); // Wait 500ms after they stop typing
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [formDataTracker.callingNumber, formDataTracker.passportNum]);
+
 
   const calculateAge = (dobString: string) => {
     if (!dobString) return null;
@@ -85,18 +123,18 @@ export default function NewLeadPage() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    setIsDirty(false); // Turn off the warning since they are officially saving
+    setIsDirty(false); // Turn off warning since we are saving
     
     const formData = new FormData(e.currentTarget);
     
     try {
       await createLead(formData);
-      router.push("/sales");
+      router.push("/sales/leads");
       router.refresh();
     } catch (error) {
       console.error("Failed to create lead:", error);
       setLoading(false);
-      setIsDirty(true); // Turn warning back on if it failed to save
+      setIsDirty(true); // Turn warning back on if save failed
     }
   };
 
@@ -111,9 +149,19 @@ export default function NewLeadPage() {
         <p className="text-slate-500 text-sm">Create a new client profile and start the Stage 1 onboarding process.</p>
       </div>
 
-      {/* onChange sets isDirty to true the moment they type anything */}
       <form onSubmit={handleSubmit} onChange={() => setIsDirty(true)}>
         
+        {/* 🚨 DUPLICATE ALERT BANNER */}
+        {duplicateAlert && (
+          <div className="bg-red-50 border-2 border-red-500 text-red-700 p-6 rounded-xl mb-6 flex items-center gap-4 shadow-sm animate-in fade-in slide-in-from-top-4">
+            <span className="text-3xl">🛑</span>
+            <div>
+              <h3 className="font-bold text-lg">Duplicate File Detected!</h3>
+              <p className="font-medium">{duplicateAlert.message}</p>
+            </div>
+          </div>
+        )}
+
         {/* 1. ROUTING INFORMATION */}
         <div className={sectionStyle}>
           <h2 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-3 mb-4">1. Routing Information</h2>
@@ -187,7 +235,16 @@ export default function NewLeadPage() {
               </div>
             </div>
 
-            <div><label className={labelStyle}>Phone Number (UAE) <span className="text-red-500">*</span></label><input type="text" name="callingNumber" required className={inputStyle} /></div>
+            <div>
+              <label className={labelStyle}>Phone Number (UAE) <span className="text-red-500">*</span></label>
+              <input 
+                type="text" 
+                name="callingNumber" 
+                required 
+                className={inputStyle} 
+                onChange={(e) => setFormDataTracker({...formDataTracker, callingNumber: e.target.value})}
+              />
+            </div>
             <div><label className={labelStyle}>WhatsApp Number</label><input type="text" name="whatsappNumber" className={inputStyle} /></div>
             <div><label className={labelStyle}>Email Address</label><input type="email" name="email" className={inputStyle} /></div>
             <div><label className={labelStyle}>Nationality <span className="text-red-500">*</span></label><input type="text" name="nationality" required className={inputStyle} /></div>
@@ -282,7 +339,14 @@ export default function NewLeadPage() {
                 <label className="font-bold text-slate-700">4. PASSPORT</label>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-8">
-                <div><label className="text-xs text-slate-500">Passport Number</label><input type="text" name="passportNum" className={inputStyle} /></div>
+                <div><label className="text-xs text-slate-500">Passport Number</label>
+                  <input 
+                    type="text" 
+                    name="passportNum" 
+                    className={inputStyle} 
+                    onChange={(e) => setFormDataTracker({...formDataTracker, passportNum: e.target.value})}
+                  />
+                </div>
                 <div><label className="text-xs text-slate-500">Issue Date</label><input type="date" name="passportIssueDate" className={inputStyle} /></div>
                 <div><label className="text-xs text-slate-500">Expiry Date</label><input type="date" name="passportExpiry" className={inputStyle} /></div>
               </div>
@@ -355,15 +419,20 @@ export default function NewLeadPage() {
             type="button" 
             id="cancel-button"
             onClick={() => {
-              // Custom warning if they click the cancel button
               if (isDirty && !window.confirm("You have unsaved changes. Are you sure you want to cancel?")) return;
-              router.push("/sales");
+              router.push("/sales/leads");
             }} 
             className="px-6 py-2.5 rounded-lg font-medium text-slate-600 bg-white border border-slate-300 hover:bg-slate-50"
           >
             Cancel
           </button>
-          <button type="submit" disabled={loading} className={`px-8 py-2.5 rounded-lg font-bold text-white shadow-sm ${loading ? "bg-blue-400" : "bg-blue-600 hover:bg-blue-700"}`}>
+          <button 
+            type="submit" 
+            disabled={loading || duplicateAlert !== null} 
+            className={`px-8 py-2.5 rounded-lg font-bold text-white shadow-sm ${
+              loading || duplicateAlert ? "bg-slate-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+            }`}
+          >
             {loading ? "Creating..." : "Save & Create Lead"}
           </button>
         </div>

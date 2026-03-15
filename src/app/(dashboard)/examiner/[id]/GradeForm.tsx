@@ -2,12 +2,68 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { submitTestResults } from "@/app/actions/examinerActions";
+import { submitTestEvaluation, editTestEvaluation } from "@/app/actions/leadActions";
 
 export default function GradeForm({ lead }: { lead: any }) {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
+
+  // 👇 CHANGED: Denied is now Rejected
+  const isEditMode = lead.examinerStatus === "Approved" || lead.examinerStatus === "Rejected";
+
+  const getDefault = (value: any) => {
+    return isEditMode ? (value || "") : "";
+  };
+
+  const [engScore, setEngScore] = useState<string | number>(getDefault(lead.englishScore));
+  const [engResult, setEngResult] = useState<string>(getDefault(lead.englishTestResult));
+
+  const [yardScore, setYardScore] = useState<string | number>(getDefault(lead.drivingScore));
+  const [yardResult, setYardResult] = useState<string>(getDefault(lead.yardTestResult));
+
+  const handleEnglishScoreChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (val === "") {
+      setEngScore("");
+      setEngResult("");
+      return;
+    }
+    const num = Number(val);
+    if (num < 0 || num > 10) return;
+    setEngScore(num);
+    
+    if (num >= 7) {
+      setEngResult("Passed");
+    } else if (num === 6) {
+      setEngResult("Practice Required");
+    } else {
+      setEngResult("Failed");
+    }
+  };
+
+  const handleYardScoreChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (val === "") {
+      setYardScore("");
+      setYardResult("");
+      return;
+    }
+    const num = Number(val);
+    if (num < 0 || num > 10) return;
+    setYardScore(num);
+    
+    if (num >= 7) {
+      setYardResult("Passed");
+    } else {
+      setYardResult("Failed");
+    }
+  };
+
+  const getResultBadge = (result: string) => {
+    if (result === "Passed") return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    if (result === "Failed") return "bg-red-50 text-red-700 border-red-200";
+    if (result === "Practice Required") return "bg-orange-50 text-orange-700 border-orange-200";
+    return "bg-slate-50 text-slate-500 border-slate-200";
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -15,93 +71,126 @@ export default function GradeForm({ lead }: { lead: any }) {
     const formData = new FormData(e.currentTarget);
     
     try {
-      await submitTestResults(lead.id, formData);
-      router.push("/examiner");
-      router.refresh();
+      if (isEditMode) {
+        await editTestEvaluation(formData);
+      } else {
+        await submitTestEvaluation(formData);
+      }
+      
+      window.location.href = "/examiner";
     } catch (error) {
       console.error(error);
-      setLoading(false);
+      alert("Failed to process evaluation.");
+      setLoading(false); 
     }
   };
 
-  const inputStyle = "w-full p-2.5 bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg outline-none focus:ring-2 focus:ring-purple-500";
+  const inputStyle = "w-24 p-2.5 bg-slate-50 border border-slate-300 text-slate-900 text-xl font-black rounded-lg outline-none focus:ring-2 focus:ring-purple-500 text-center shadow-inner";
   const labelStyle = "block text-sm font-bold text-slate-700 mb-2";
 
   return (
-    <form onSubmit={handleSubmit} className="bg-purple-50/50 p-8 rounded-xl shadow-sm border border-purple-100">
-      <h2 className="text-lg font-bold text-purple-900 border-b border-purple-200 pb-3 mb-6">Test Evaluation Matrix</h2>
+    <>
+      {loading && (
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white p-8 rounded-2xl shadow-2xl flex flex-col items-center max-w-sm w-full mx-4 animate-pulse">
+            <div className="h-16 w-16 animate-spin rounded-full border-4 border-slate-100 border-t-purple-600 mb-6 shadow-sm"></div>
+            <h3 className="text-xl font-bold text-slate-800 text-center">
+              {isEditMode ? "Updating Scores..." : "Saving Evaluation..."}
+            </h3>
+          </div>
+        </div>
+      )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+      <form onSubmit={handleSubmit} className="bg-purple-50/40 p-6 rounded-xl shadow-sm border border-purple-100 sticky top-6">
+        <input type="hidden" name="leadId" value={lead.id} />
         
-        {/* ENGLISH TEST */}
-        <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
-          <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">🗣️ English Assessment</h3>
+        <input type="hidden" name="englishTestResult" value={engResult} />
+        <input type="hidden" name="yardTestResult" value={yardResult} />
+
+        <h2 className="text-lg font-bold text-purple-900 border-b border-purple-200 pb-3 mb-6 flex justify-between items-center">
+          Test Evaluation Matrix
+          {isEditMode && <span className="text-[10px] font-bold bg-orange-100 text-orange-700 px-2 py-1 rounded uppercase tracking-wider">Edit Mode</span>}
+        </h2>
+
+        <div className="flex flex-col gap-5 mb-6">
+          
+          <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm flex flex-col gap-4">
+            <div>
+              <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-1">🗣️ English Assessment</h3>
+              <p className="text-xs text-slate-500 font-medium">Score from 0 to 10 (7+ is Pass)</p>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <input 
+                type="number" 
+                name="englishScore" 
+                value={engScore} 
+                onChange={handleEnglishScoreChange}
+                placeholder="-"
+                className={inputStyle} 
+              />
+              <div className="flex-1">
+                <span className={`flex items-center justify-center w-full h-full min-h-[48px] px-3 text-xs font-bold rounded-lg border shadow-sm transition-colors ${getResultBadge(engResult)}`}>
+                  {engResult || "Pending..."}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm flex flex-col gap-4">
+            <div>
+              <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-1">🚗 Yard / Driving Test</h3>
+              <p className="text-xs text-slate-500 font-medium">Score from 0 to 10 (Strict 7+ is Pass)</p>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <input 
+                type="number" 
+                name="drivingScore" 
+                value={yardScore}
+                onChange={handleYardScoreChange}
+                placeholder="-"
+                className={inputStyle} 
+              />
+              <div className="flex-1">
+                <span className={`flex items-center justify-center w-full h-full min-h-[48px] px-3 text-xs font-bold rounded-lg border shadow-sm transition-colors ${getResultBadge(yardResult)}`}>
+                  {yardResult || "Pending..."}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm mb-6">
+          <h3 className="font-bold text-slate-800 mb-4">Final Decision</h3>
           <div className="space-y-4">
             <div>
-              <label className={labelStyle}>Score (0-100)</label>
-              <input type="number" name="englishScore" defaultValue={lead.englishScore || ""} min="0" max="100" className={inputStyle} />
-            </div>
-            <div>
-              <label className={labelStyle}>Result</label>
-              <select name="englishTestResult" defaultValue={lead.englishTestResult || ""} required className={inputStyle}>
-                <option value="">Select Result...</option>
-                <option value="Passed">Passed</option>
-                <option value="Failed">Failed</option>
-                <option value="Practice Required">Practice Required</option>
+              <label className={labelStyle}>Overall Status <span className="text-red-500">*</span></label>
+              {/* 👇 CHANGED: Options updated to Rejected */}
+              <select name="examinerStatus" defaultValue={getDefault(lead.examinerStatus)} required className="w-full p-2.5 bg-slate-50 border border-slate-300 text-slate-900 text-sm font-bold rounded-lg outline-none focus:ring-2 focus:ring-purple-500">
+                <option value="">Pending Decision...</option>
+                <option value="Approved">🟢 APPROVED</option>
+                <option value="Rejected">🔴 REJECTED</option>
               </select>
             </div>
-          </div>
-        </div>
-
-        {/* YARD/DRIVING TEST */}
-        <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
-          <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">🚗 Yard / Driving Test</h3>
-          <div className="space-y-4">
             <div>
-              <label className={labelStyle}>Score (0-100)</label>
-              <input type="number" name="drivingScore" defaultValue={lead.drivingScore || ""} min="0" max="100" className={inputStyle} />
-            </div>
-            <div>
-              <label className={labelStyle}>Result</label>
-              <select name="yardTestResult" defaultValue={lead.yardTestResult || ""} required className={inputStyle}>
-                <option value="">Select Result...</option>
-                <option value="Passed">Passed</option>
-                <option value="Failed">Failed</option>
-                <option value="Practice Required">Practice Required</option>
-              </select>
+              <label className={labelStyle}>Remarks / Feedback</label>
+              <textarea name="examinerRemarks" defaultValue={getDefault(lead.examinerRemarks)} rows={3} placeholder="Notes on performance..." className="w-full p-2.5 bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg outline-none focus:ring-2 focus:ring-purple-500"></textarea>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* FINAL DECISION */}
-      <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm mb-8">
-        <h3 className="font-bold text-slate-800 mb-4">Final Examiner Decision</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className={labelStyle}>Overall Status <span className="text-red-500">*</span></label>
-            <select name="examinerStatus" defaultValue={lead.examinerStatus || ""} required className={`${inputStyle} font-bold`}>
-              <option value="">Pending Decision...</option>
-              <option value="Approved">🟢 APPROVED (Send to Operations)</option>
-              <option value="Denied">🔴 DENIED (Hold in Sales)</option>
-            </select>
-          </div>
-          <div className="md:col-span-2">
-            <label className={labelStyle}>Examiner Remarks / Feedback</label>
-            <textarea name="examinerRemarks" defaultValue={lead.examinerRemarks} rows={3} placeholder="Notes on performance, parallel parking, language barrier, etc..." className={inputStyle}></textarea>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex justify-end gap-4">
-        <button type="button" onClick={() => router.back()} className="px-6 py-3 rounded-lg font-bold text-slate-600 bg-white border border-slate-300 hover:bg-slate-50">
-          Cancel
+        <button 
+          type="submit" 
+          disabled={loading || engScore === "" || yardScore === ""} 
+          className={`w-full py-3.5 rounded-lg font-bold text-white shadow-md transition-colors ${
+            loading || engScore === "" || yardScore === "" ? "bg-slate-300 text-slate-500 cursor-not-allowed" : 
+            isEditMode ? "bg-orange-600 hover:bg-orange-700" : "bg-purple-600 hover:bg-purple-700"
+          }`}
+        >
+          {isEditMode ? "Update Existing Scores" : "Submit Final Grades"}
         </button>
-        <button type="submit" disabled={loading} className={`px-8 py-3 rounded-lg font-bold text-white shadow-md ${loading ? "bg-purple-400" : "bg-purple-600 hover:bg-purple-700"}`}>
-          {loading ? "Submitting..." : "Submit Final Grades"}
-        </button>
-      </div>
-
-    </form>
+      </form>
+    </>
   );
 }

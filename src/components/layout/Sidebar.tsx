@@ -26,7 +26,9 @@ export default function Sidebar() {
 
     // OTHER TEAMS
     { name: "Operations Queue", href: "/operations", roles: ["ADMIN", "OPERATIONS"] },
-    { name: "HR Verification", href: "/hr", roles: ["ADMIN", "HR"] },
+    { name: "HR Dashboard", href: "/hr", roles: ["ADMIN", "HR"] },
+    // 👇 NEW TAB ADDED HERE 👇
+    { name: "HR Verification", href: "/hr/verification", roles: ["ADMIN", "HR"] }, 
     { name: "Examiner Pending", href: "/examiner", roles: ["ADMIN", "EXAMINER"] },
   ];
 

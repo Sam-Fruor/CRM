@@ -1,21 +1,25 @@
+// src/app/(dashboard)/sales/[id]/TransferBanner.tsx
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { transferToStage2 } from "@/app/actions/leadActions";
 
 export default function TransferBanner({ leadId }: { leadId: string }) {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   const handleTransfer = async () => {
     setLoading(true);
-    await transferToStage2(leadId);
-    
-    // Show success message and redirect back to the database
-    alert("🚀 File Transferred Successfully to Operations!");
-    router.push("/sales/leads");
-    router.refresh(); 
+    try {
+      await transferToStage2(leadId);
+      alert("🚀 File Transferred Successfully to Operations!");
+      
+      // THE FIX: Hard redirect forces the browser to pull fresh, locked data!
+      window.location.href = "/sales/leads";
+    } catch (error) {
+      console.error(error);
+      alert("Failed to transfer file.");
+      setLoading(false);
+    }
   };
 
   return (
@@ -33,7 +37,7 @@ export default function TransferBanner({ leadId }: { leadId: string }) {
       <button 
         onClick={handleTransfer}
         disabled={loading}
-        className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-xl font-bold shadow-md transition-all hover:scale-105 active:scale-95 disabled:bg-emerald-400"
+        className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-xl font-bold shadow-md transition-all hover:scale-105 active:scale-95 disabled:bg-emerald-400 disabled:hover:scale-100 disabled:cursor-not-allowed"
       >
         {loading ? "Transferring..." : "Transfer to Stage 2 🚀"}
       </button>

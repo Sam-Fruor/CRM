@@ -55,6 +55,7 @@ model Lead {
   updatedAt       DateTime @updatedAt
   branch          Branch   // Dictates which branch owns this lead
   activities      ActivityLog[]
+  testEvaluations TestEvaluation[]
 
   // ----------------------------------------------------
   // FIRST PAGE INFO (Visible to Sales, Ops, HR, Examiner)
@@ -123,7 +124,8 @@ model Lead {
   followUpDate      DateTime?
   followUpRemarks   String?    @db.Text
   lastEmailDate     DateTime?
-  caseRemarks       String?    @db.Text
+  hrRemarks         String?    @db.Text
+  opsRemarks        String?    @db.Text
 
   // ----------------------------------------------------
   // DOCUMENTS (Operations & HR)
@@ -132,6 +134,7 @@ model Lead {
   // without creating 40+ individual database columns.
   documentStatus    Json     @default("{}") // e.g., { passportPending: true, cvUploaded: true }
   documentFiles     Json     @default("{}") // e.g., { passportUrl: "https://...", cvUrl: "https://..." }
+  documentChecklist     Json     @default("{}")
 
   // ----------------------------------------------------
   // STAGE 3: EXAMINER
@@ -178,4 +181,20 @@ model Notification {
   createdAt DateTime @default(now())
 
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TestEvaluation {
+  id                String   @id @default(cuid())
+  leadId            String
+  lead              Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  
+  // Detailed Historical Records
+  englishScore      Int?
+  englishTestResult String?
+  drivingScore      Int?
+  yardTestResult    String?
+  status            String   // Approved or Denied
+  remarks           String?  @db.Text
+  
+  createdAt         DateTime @default(now())
 }
