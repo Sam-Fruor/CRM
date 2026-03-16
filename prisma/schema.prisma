@@ -117,13 +117,26 @@ model Lead {
   schoolFeesPending       Float?
   flightTicketPending     Float? // From HR view
   invoiceNumber           String?
+  reTestFeesAmount            Float?
+  reTestDate                  DateTime?
+  reTestTotalPayment          Float?
+  reTestInvoiceNumber         String? 
+  reTestPaymentDate           DateTime?
+  serviceAgreementAmount      Float?
+  serviceAgreementInvoice     String?
+  serviceAgreementTotal       Float?
+  serviceAgreementPaymentDate DateTime?
   paymentDate             DateTime?
+
+  // ♾️ DYNAMIC PAYMENTS LEDGER
+  otherPayments               Json      @default("[]") // 👈 ADD THIS!
 
   // Follow-up Details
   lastCallDate      DateTime?
   followUpDate      DateTime?
   followUpRemarks   String?    @db.Text
   lastEmailDate     DateTime?
+  hrNextFollowUpDate  DateTime?
   hrRemarks         String?    @db.Text
   opsRemarks        String?    @db.Text
 

@@ -182,11 +182,11 @@ export default async function ExaminerDashboardPage({ searchParams }: { searchPa
                       </Link>
                     </td>
                     <td className="p-4 text-sm">
-                      <span className="font-bold">{log.englishScore || 0}/100</span>
+                      <span className="font-bold">{log.englishScore || 0}/10</span>
                       <p className="text-xs text-slate-500">{log.englishTestResult}</p>
                     </td>
                     <td className="p-4 text-sm">
-                      <span className="font-bold">{log.drivingScore || 0}/100</span>
+                      <span className="font-bold">{log.drivingScore || 0}/10</span>
                       <p className="text-xs text-slate-500">{log.yardTestResult}</p>
                     </td>
                     <td className="p-4">

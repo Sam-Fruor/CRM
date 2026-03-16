@@ -163,6 +163,7 @@ export async function updateHRFile(leadId: string, formData: FormData) {
 
       // Tracking & Remarks
       lastEmailDate: parseDate(formData.get("lastEmailDate")),
+      hrNextFollowUpDate: parseDate(formData.get("hrNextFollowUpDate")),
       hrRemarks: formData.get("hrRemarks") as string,
 
       // Insert the SMART message!

@@ -116,11 +116,11 @@ export default async function ExaminerProfileView({ params }: { params: Promise<
                     <div className="grid grid-cols-2 gap-4 mb-3 text-sm bg-slate-800/50 p-3 rounded border border-slate-600">
                       <div>
                         <p className="text-slate-400 text-xs uppercase">English</p>
-                        <p className="font-bold">{test.englishScore}/100 <span className="text-slate-400 font-normal">({test.englishTestResult})</span></p>
+                        <p className="font-bold">{test.englishScore}/10 <span className="text-slate-400 font-normal">({test.englishTestResult})</span></p>
                       </div>
                       <div>
                         <p className="text-slate-400 text-xs uppercase">Driving</p>
-                        <p className="font-bold">{test.drivingScore}/100 <span className="text-slate-400 font-normal">({test.yardTestResult})</span></p>
+                        <p className="font-bold">{test.drivingScore}/10 <span className="text-slate-400 font-normal">({test.yardTestResult})</span></p>
                       </div>
                     </div>
 

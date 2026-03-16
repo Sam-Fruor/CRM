@@ -13,6 +13,14 @@ const COUNTRY_LIST = [
   "United Kingdom", "Other"
 ].sort();
 
+const FEEDBACK_OPTIONS = [
+  "Converted",
+  "Not Responding",
+  "Not Interested",
+  "Not Eligible",
+  "Client is for Next Test"
+];
+
 export default function NewLeadPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -24,10 +32,11 @@ export default function NewLeadPage() {
   const [hasPreviousAgency, setHasPreviousAgency] = useState(false);
   const [hasPreviousCountry, setHasPreviousCountry] = useState(false);
 
-  // State for "Others" conditionals
+  // State for conditionals
   const [leadSource, setLeadSource] = useState("");
   const [category, setCategory] = useState("");
   const [countryPreferred, setCountryPreferred] = useState("");
+  const [feedbackSelect, setFeedbackSelect] = useState("");
 
   // 🔎 LIVE FORM DATA TRACKER (For Duplicate Scanner)
   const [formDataTracker, setFormDataTracker] = useState({
@@ -88,9 +97,7 @@ export default function NewLeadPage() {
 
     const delayDebounceFn = setTimeout(async () => {
       try {
-        // Call the Server Action directly
         const data = await checkDuplicateLead(phone, passport);
-
         if (data?.duplicate) {
           setDuplicateAlert({
             message: `Client already exists in ${data.branch} under ID: ${data.shortId}`
@@ -101,7 +108,7 @@ export default function NewLeadPage() {
       } catch (error) {
         console.error(error);
       }
-    }, 500); // Wait 500ms after they stop typing
+    }, 500); 
 
     return () => clearTimeout(delayDebounceFn);
   }, [formDataTracker.callingNumber, formDataTracker.passportNum]);
@@ -138,7 +145,7 @@ export default function NewLeadPage() {
     }
   };
 
-  const inputStyle = "w-full p-2.5 bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-shadow";
+  const inputStyle = "w-full p-2.5 bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all";
   const labelStyle = "block text-sm font-semibold text-slate-700 mb-1.5";
   const sectionStyle = "bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-6";
 
@@ -299,22 +306,20 @@ export default function NewLeadPage() {
           </div>
         </div>
 
-        {/* 4. DOCUMENTS & ID DETAILS */}
+        {/* 4. DOCUMENTS & ID DETAILS (Auto-Sync Format) */}
         <div className="bg-blue-50/50 p-6 rounded-xl shadow-sm border border-blue-100 mb-6">
-          <h2 className="text-lg font-bold text-blue-900 border-b border-blue-100 pb-3 mb-4">4. Documents & ID Details</h2>
+          <h2 className="text-lg font-bold text-blue-900 border-b border-blue-100 pb-3 mb-4 flex justify-between items-center">
+            <span>🗂️ 4. ID Details & Expirations</span>
+            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-100 border border-emerald-200 px-2 py-1 rounded">Vault Auto-Sync Enabled</span>
+          </h2>
           
           <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <input type="checkbox" name="resumeUploaded" className="w-5 h-5" />
-              <label className="font-bold text-slate-700">1. CV / RESUME</label>
-            </div>
-
             <div className="p-4 bg-white rounded-lg border border-slate-200">
-              <div className="flex items-center gap-3 mb-3">
-                <input type="checkbox" name="dlUploaded" className="w-5 h-5" />
-                <label className="font-bold text-slate-700">2. DRIVING LICENCE</label>
+              <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
+                <label className="font-bold text-slate-700">1. DRIVING LICENCE</label>
+                <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-3 py-1 rounded-full">Pending Upload</span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-8">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-2">
                 <div><label className="text-xs text-slate-500">DL Number</label><input type="text" name="dlNumber" className={inputStyle} /></div>
                 <div><label className="text-xs text-slate-500">Issue Date</label><input type="date" name="dlIssueDate" className={inputStyle} /></div>
                 <div><label className="text-xs text-slate-500">Expiry Date</label><input type="date" name="dlExpiry" className={inputStyle} /></div>
@@ -322,11 +327,11 @@ export default function NewLeadPage() {
             </div>
 
             <div className="p-4 bg-white rounded-lg border border-slate-200">
-              <div className="flex items-center gap-3 mb-3">
-                <input type="checkbox" name="residentIdUploaded" className="w-5 h-5" />
-                <label className="font-bold text-slate-700">3. RESIDENT ID</label>
+              <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
+                <label className="font-bold text-slate-700">2. RESIDENT ID</label>
+                <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-3 py-1 rounded-full">Pending Upload</span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-8">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-2">
                 <div><label className="text-xs text-slate-500">ID Number</label><input type="text" name="residentIdNum" className={inputStyle} /></div>
                 <div><label className="text-xs text-slate-500">Issue Date</label><input type="date" name="residentIdIssueDate" className={inputStyle} /></div>
                 <div><label className="text-xs text-slate-500">Expiry Date</label><input type="date" name="residentIdExp" className={inputStyle} /></div>
@@ -334,12 +339,13 @@ export default function NewLeadPage() {
             </div>
 
             <div className="p-4 bg-white rounded-lg border border-slate-200">
-              <div className="flex items-center gap-3 mb-3">
-                <input type="checkbox" name="passportUploaded" className="w-5 h-5" />
-                <label className="font-bold text-slate-700">4. PASSPORT</label>
+              <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
+                <label className="font-bold text-slate-700">3. PASSPORT</label>
+                <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-3 py-1 rounded-full">Pending Upload</span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-8">
-                <div><label className="text-xs text-slate-500">Passport Number</label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-2">
+                <div>
+                  <label className="text-xs text-slate-500">Passport Number</label>
                   <input 
                     type="text" 
                     name="passportNum" 
@@ -351,67 +357,75 @@ export default function NewLeadPage() {
                 <div><label className="text-xs text-slate-500">Expiry Date</label><input type="date" name="passportExpiry" className={inputStyle} /></div>
               </div>
             </div>
-
-            <div className="flex items-center gap-3">
-              <input type="checkbox" name="videoUploaded" className="w-5 h-5" />
-              <label className="font-bold text-slate-700">5. TEST OR DRIVING VIDEO</label>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <input type="checkbox" name="otherUploaded" className="w-5 h-5" />
-              <label className="font-bold text-slate-700">6. OTHER</label>
-            </div>
           </div>
         </div>
 
-        {/* 5. SALES PROCESSING & FEEDBACK */}
-        <div className="bg-orange-50/50 p-6 rounded-xl shadow-sm border border-orange-100 mb-6">
-          <h2 className="text-lg font-bold text-orange-900 border-b border-orange-100 pb-3 mb-4">5. Sales Processing & Feedback</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
-            <div className="md:col-span-3">
-              <label className={labelStyle}>Feedback / Conversion Status</label>
-              <select name="feedbackStatus" className={inputStyle}>
+{/* 5. SALES PROCESSING & FINANCIALS */}
+        <div className="bg-blue-50/30 p-6 rounded-xl shadow-sm border border-blue-200 mb-6">
+          <h2 className="text-lg font-bold text-blue-900 border-b border-blue-200 pb-3 mb-5 flex items-center gap-2">
+            💰 5. Sales Processing & Scheduling
+          </h2>
+
+          {/* FEEDBACK STATUS */}
+          <div className="mb-6 bg-white p-4 rounded-lg border border-blue-100 shadow-sm">
+            <label className="block text-sm font-bold text-blue-800 uppercase tracking-wider mb-3">⭐ Feedback / Conversion Status</label>
+            <div className="flex flex-col md:flex-row gap-4">
+              <select 
+                name="feedbackStatus" 
+                value={feedbackSelect}
+                onChange={(e) => setFeedbackSelect(e.target.value)}
+                className={`${inputStyle} w-full md:w-1/3 border-blue-300 font-semibold bg-blue-50/50`}
+              >
                 <option value="">Pending Update...</option>
-                <option value="Converted">Converted</option>
-                <option value="Not Responding">Not Responding</option>
-                <option value="Not Interested">Not Interested</option>
-                <option value="Not Eligible">Not Eligible</option>
-                <option value="Client is for Next Test">Client is for Next Test</option>
-                <option value="Others">Others</option>
+                {FEEDBACK_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                <option value="Others">Others (Custom)</option>
               </select>
+              {feedbackSelect === "Others" && (
+                <div className="w-full md:w-2/3 animate-in fade-in zoom-in-95 duration-200">
+                  <input type="text" name="feedbackStatusOther" placeholder="Type custom status here..." className={`${inputStyle} border-blue-300 font-semibold`} required />
+                </div>
+              )}
             </div>
-            <div><label className={labelStyle}>Slot Booking Date</label><input type="date" name="slotBookingDate" className={inputStyle} /></div>
-            <div><label className={labelStyle}>Test Date</label><input type="date" name="testDate" className={inputStyle} /></div>
           </div>
 
-          <div className="p-4 bg-white rounded-lg border border-orange-200 mb-6">
-            <h3 className="text-sm font-bold text-slate-800 mb-3">Payment Details</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div><label className={labelStyle}>Test Fees Amt</label><input type="number" step="0.01" name="testFeesAmount" className={inputStyle} /></div>
-              <div><label className={labelStyle}>Total Payment</label><input type="number" step="0.01" name="totalPayment" className={inputStyle} /></div>
-              <div><label className={labelStyle}>Invoice No.</label><input type="text" name="invoiceNumber" className={inputStyle} /></div>
+          {/* INITIAL TEST FEES */}
+          <div className="mb-6">
+            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Initial Test Record</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-white p-4 rounded-lg border border-blue-100 shadow-sm">
+              <div><label className={labelStyle}>Test Date</label><input type="date" name="testDate" className={inputStyle} /></div>
+              <div><label className={labelStyle}>Test Fees (AED)</label><input type="number" step="0.01" name="testFeesAmount" placeholder="0.00" className={inputStyle} /></div>
+              <div><label className={labelStyle}>Invoice No.</label><input type="text" name="invoiceNumber" placeholder="INV-XXX" className={inputStyle} /></div>
               <div><label className={labelStyle}>Payment Date</label><input type="date" name="paymentDate" className={inputStyle} /></div>
             </div>
+            <p className="text-[10px] text-slate-500 mt-2 pl-1 font-medium">Note: System will auto-book slot date as "Today" when test date is provided.</p>
           </div>
 
-          <div className="p-4 bg-white rounded-lg border border-orange-200">
-            <h3 className="text-sm font-bold text-slate-800 mb-3">Follow-up Remarks</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div><label className={labelStyle}>Last Call Date</label><input type="date" name="lastCallDate" className={inputStyle} /></div>
-              <div><label className={labelStyle}>Next Follow-up Date</label><input type="date" name="followUpDate" className={inputStyle} /></div>
-              <div className="md:col-span-2">
-                <label className={labelStyle}>Remark's</label>
-                <input type="text" name="followUpRemarks" className={inputStyle} />
-              </div>
+          {/* SERVICE AGREEMENT FEES */}
+          <div className="mb-6">
+            <h3 className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-2">Service Agreement Fees</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-emerald-50/50 p-4 rounded-lg border border-emerald-200 shadow-sm">
+              <div><label className={labelStyle}>Agreement Fee (AED)</label><input type="number" step="0.01" name="serviceAgreementAmount" placeholder="0.00" className={inputStyle} /></div>
+              <div><label className={labelStyle}>Invoice No.</label><input type="text" name="serviceAgreementInvoice" placeholder="INV-XXX" className={inputStyle} /></div>
+              <div><label className={labelStyle}>Payment Date</label><input type="date" name="serviceAgreementPaymentDate" className={inputStyle} /></div>
             </div>
           </div>
         </div>
-
-        {/* 6. REMARKS */}
+        
+        {/* 6. FOLLOW-UPS & REMARKS */}
         <div className={sectionStyle}>
-          <h2 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-3 mb-4">6. Remarks</h2>
-          <textarea name="salesRemarks" rows={3} className={inputStyle}></textarea>
+          <h2 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-3 mb-4 flex items-center gap-2">
+            💭 6. Follow-Ups & Notes
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5 bg-slate-50 p-5 rounded-lg border border-slate-100">
+            <div><label className={labelStyle}>Last Call Date</label><input type="date" name="lastCallDate" className={inputStyle} /></div>
+            <div><label className={labelStyle}>Next Follow-up Date</label><input type="date" name="followUpDate" className={inputStyle} /></div>
+            <div className="md:col-span-2"><label className={labelStyle}>Follow-up Remarks</label><input type="text" name="followUpRemarks" placeholder="Quick follow-up notes..." className={inputStyle} /></div>
+          </div>
+
+          <div>
+            <label className={labelStyle}>Primary Sales Remarks</label>
+            <textarea name="salesRemarks" rows={4} placeholder="Detailed sales notes and client context..." className={inputStyle}></textarea>
+          </div>
         </div>
 
         <div className="flex justify-end gap-3">

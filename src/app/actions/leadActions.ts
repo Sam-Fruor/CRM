@@ -10,15 +10,6 @@ export async function createLead(formData: FormData) {
   const session = await getServerSession(authOptions);
   if (!session) throw new Error("Unauthorized");
 
-  // Document Checklist (Added Video)
-  const documentStatus = {
-    resumeUploaded: formData.get("resumeUploaded") === "on",
-    passportUploaded: formData.get("passportUploaded") === "on",
-    dlUploaded: formData.get("dlUploaded") === "on",
-    residentIdUploaded: formData.get("residentIdUploaded") === "on",
-    videoUploaded: formData.get("videoUploaded") === "on",
-    otherUploaded: formData.get("otherUploaded") === "on",
-  };
 
   const parseDate = (val: FormDataEntryValue | null) => {
     if (!val || typeof val !== 'string') return null;
@@ -31,6 +22,19 @@ export async function createLead(formData: FormData) {
     const parsed = parseFloat(val);
     return isNaN(parsed) ? null : parsed;
   };
+
+  // 🧠 SMART FEEDBACK SENSOR
+  let finalFeedbackStatus = formData.get("feedbackStatus") as string | undefined;
+  if (finalFeedbackStatus === "Others") {
+    finalFeedbackStatus = formData.get("feedbackStatusOther") as string || "Others";
+  }
+
+  // 🕒 AUTO-SLOT BOOKING
+  const tDate = parseDate(formData.get("testDate"));
+  let sBookingDate = parseDate(formData.get("slotBookingDate"));
+  if (tDate && !sBookingDate) {
+    sBookingDate = new Date(); // Auto-book today if a test is scheduled
+  }
 
   await prisma.lead.create({
     data: {
@@ -70,15 +74,19 @@ export async function createLead(formData: FormData) {
       
       // Sales / Stage 1 Processing
       caseStatus: "Stage 1 Under Process", 
-      feedbackStatus: formData.get("feedbackStatus") as string,
-      slotBookingDate: parseDate(formData.get("slotBookingDate")),
-      testDate: parseDate(formData.get("testDate")),
+      feedbackStatus: finalFeedbackStatus,
+      slotBookingDate: sBookingDate,
+      testDate: tDate,
       
-      // Payments
+      // Payments (Initial Creation)
       testFeesAmount: parseFloatSafe(formData.get("testFeesAmount")),
       totalPayment: parseFloatSafe(formData.get("totalPayment")),
       invoiceNumber: formData.get("invoiceNumber") as string,
       paymentDate: parseDate(formData.get("paymentDate")),
+      
+      serviceAgreementAmount: parseFloatSafe(formData.get("serviceAgreementAmount")),
+      serviceAgreementInvoice: formData.get("serviceAgreementInvoice") as string,
+      serviceAgreementPaymentDate: parseDate(formData.get("serviceAgreementPaymentDate")),
       
       // Follow-ups
       lastCallDate: parseDate(formData.get("lastCallDate")),
@@ -87,7 +95,6 @@ export async function createLead(formData: FormData) {
       salesRemarks: formData.get("salesRemarks") as string,
       
       // Document Dates & JSON
-      documentStatus: documentStatus,
       passportIssueDate: parseDate(formData.get("passportIssueDate")),
       passportExpiry: parseDate(formData.get("passportExpiry")),
       dlIssueDate: parseDate(formData.get("dlIssueDate")),
@@ -108,6 +115,7 @@ export async function createLead(formData: FormData) {
   revalidatePath("/sales");
 }
 
+
 export async function updateLeadStage1(leadId: string, formData: FormData) {
   const session = await getServerSession(authOptions);
   if (!session) throw new Error("Unauthorized");
@@ -127,13 +135,7 @@ export async function updateLeadStage1(leadId: string, formData: FormData) {
     return isNaN(date.getTime()) ? null : date;
   };
 
-  const parseFloatSafe = (val: FormDataEntryValue | null) => {
-    if (!val || typeof val !== 'string') return null;
-    const parsed = parseFloat(val);
-    return isNaN(parsed) ? null : parsed;
-  };
-
-  // 1. Fetch the existing lead to check their old test date and status
+  // 1. Fetch existing lead to check old test date and status
   const existingLead = await prisma.lead.findUnique({
     where: { id: leadId },
     select: { testDate: true, examinerStatus: true }
@@ -143,13 +145,12 @@ export async function updateLeadStage1(leadId: string, formData: FormData) {
   const oldTestDateTimestamp = existingLead?.testDate?.getTime();
   const newTestDateTimestamp = newTestDate?.getTime();
 
-  // 2. THE RETAKE SENSOR: 
-  // If they were Denied, and Sales picked a NEW test date, reset them to Pending!
-  let newExaminerStatus = undefined; // Undefined means Prisma won't touch the column
-  let activityMessage = "Stage 1 information or documents were updated.";
+  // 2. THE RETAKE SENSOR
+  let newExaminerStatus = undefined; 
+  let activityMessage = "Core Profile details (Sections 1-4) were updated.";
 
   if (
-    existingLead?.examinerStatus === "Rejected" && 
+    existingLead?.examinerStatus === "Denied" && // 👈 Changed "Rejected" to "Denied"
     newTestDateTimestamp && 
     newTestDateTimestamp !== oldTestDateTimestamp
   ) {
@@ -157,7 +158,7 @@ export async function updateLeadStage1(leadId: string, formData: FormData) {
     activityMessage = "Exam Retake Scheduled: New test date selected. Sent back to Examiner Queue.";
   }
 
-  // 3. Update the database
+  // 3. Update ONLY Core Profile Data (Prevents wiping financials!)
   await prisma.lead.update({
     where: { id: leadId },
     data: {
@@ -188,22 +189,9 @@ export async function updateLeadStage1(leadId: string, formData: FormData) {
       previousAgency: formData.get("previousAgency") as string,
       previousCountry: formData.get("previousCountry") as string,
       
-      feedbackStatus: formData.get("feedbackStatus") as string,
       slotBookingDate: parseDate(formData.get("slotBookingDate")),
-      
-      // Save the new test date, and apply the reset if triggered
       testDate: newTestDate,
       examinerStatus: newExaminerStatus,
-      
-      testFeesAmount: parseFloatSafe(formData.get("testFeesAmount")),
-      totalPayment: parseFloatSafe(formData.get("totalPayment")),
-      invoiceNumber: formData.get("invoiceNumber") as string,
-      paymentDate: parseDate(formData.get("paymentDate")),
-      
-      lastCallDate: parseDate(formData.get("lastCallDate")),
-      followUpDate: parseDate(formData.get("followUpDate")),
-      followUpRemarks: formData.get("followUpRemarks") as string,
-      salesRemarks: formData.get("salesRemarks") as string,
       
       documentStatus: documentStatus,
       passportIssueDate: parseDate(formData.get("passportIssueDate")),
@@ -216,7 +204,7 @@ export async function updateLeadStage1(leadId: string, formData: FormData) {
       activities: {
         create: {
           userId: session.user.id,
-          action: newExaminerStatus ? "Retake Scheduled" : "Lead Updated",
+          action: newExaminerStatus ? "Retake Scheduled" : "Core Profile Updated",
           details: activityMessage,
         }
       }
@@ -224,16 +212,14 @@ export async function updateLeadStage1(leadId: string, formData: FormData) {
   });
 
   revalidatePath("/sales");
-  revalidatePath("/examiner"); // Ensure the Examiner queue refreshes too!
+  revalidatePath("/examiner"); 
 }
 
-// Add this to the bottom of src/app/actions/leadActions.ts
 
 export async function updateLeadPipelineStatus(leadId: string, newStatus: string) {
   const session = await getServerSession(authOptions);
   if (!session) throw new Error("Unauthorized");
 
-  // Map the pipeline columns back to your database dropdown values
   let dbStatus = newStatus;
   if (newStatus === "Pending") dbStatus = "";
   if (newStatus === "Following Up") dbStatus = "Not Responding"; 
@@ -255,13 +241,11 @@ export async function updateLeadPipelineStatus(leadId: string, newStatus: string
   revalidatePath("/sales/pipeline");
 }
 
-// Add this to the bottom of src/app/actions/leadActions.ts
 
 export async function transferToStage2(leadId: string) {
   const session = await getServerSession(authOptions);
   if (!session) throw new Error("Unauthorized");
 
-  // 1. Move the Lead to Stage 2
   const updatedLead = await prisma.lead.update({
     where: { id: leadId },
     data: {
@@ -276,15 +260,10 @@ export async function transferToStage2(leadId: string) {
     }
   });
 
-  // 2. 🔔 NOTIFY ALL HR USERS 🔔
-  // Find all users with the role of HR or ADMIN
   const hrUsers = await prisma.user.findMany({
-    where: {
-      role: { in: ["HR", "ADMIN"] }
-    }
+    where: { role: { in: ["HR", "ADMIN"] } }
   });
 
-  // Create a notification for each HR user
   if (hrUsers.length > 0) {
     const notifications = hrUsers.map((hr) => ({
       userId: hr.id,
@@ -293,32 +272,38 @@ export async function transferToStage2(leadId: string) {
       link: `/hr/${updatedLead.id}`
     }));
 
-    await prisma.notification.createMany({
-      data: notifications
-    });
+    await prisma.notification.createMany({ data: notifications });
   }
 
   revalidatePath("/sales");
   revalidatePath(`/sales/${leadId}`);
 }
 
-// Add this to the bottom of src/app/actions/leadActions.ts
 
-export async function checkDuplicateLead(phone: string, passport: string) {
+export async function checkDuplicateLead(phone: string, passport: string, excludeLeadId?: string) {
   const session = await getServerSession(authOptions);
   if (!session) return { error: "Unauthorized" };
 
-  if (!phone && !passport) return { duplicate: false };
+  // Clean up any accidental spaces from typing
+  const cleanPhone = phone?.trim();
+  const cleanPassport = passport?.trim();
 
-  // Scan the ENTIRE database (ignoring what branch the user is in)
+  if (!cleanPhone && !cleanPassport) return { duplicate: false };
+
+  // 🔎 Scan the database, but IGNORE the current lead if we are editing
   const duplicate = await prisma.lead.findFirst({
     where: {
-      OR: [
-        ...(phone ? [{ callingNumber: phone }] : []),
-        ...(passport ? [{ passportNum: passport }] : [])
+      AND: [
+        {
+          OR: [
+            ...(cleanPhone ? [{ callingNumber: cleanPhone }] : []),
+            ...(cleanPassport ? [{ passportNum: cleanPassport }] : [])
+          ]
+        },
+        ...(excludeLeadId ? [{ NOT: { id: excludeLeadId } }] : []) // 🛡️ The Edit-Mode Shield
       ]
     },
-    select: { id: true, branch: true } // Only grab ID and Branch for speed
+    select: { id: true, branch: true } 
   });
 
   if (duplicate) {
@@ -332,6 +317,7 @@ export async function checkDuplicateLead(phone: string, passport: string) {
   return { duplicate: false };
 }
 
+
 export async function submitTestEvaluation(formData: FormData) {
   const session = await getServerSession(authOptions);
   if (!session || (!["EXAMINER", "ADMIN"].includes(session.user.role))) {
@@ -343,10 +329,9 @@ export async function submitTestEvaluation(formData: FormData) {
   const englishTestResult = formData.get("englishTestResult") as string;
   const drivingScore = parseInt(formData.get("drivingScore") as string) || null;
   const yardTestResult = formData.get("yardTestResult") as string;
-  const examinerStatus = formData.get("examinerStatus") as string; // "Approved" or "Denied"
+  const examinerStatus = formData.get("examinerStatus") as string; 
   const examinerRemarks = formData.get("examinerRemarks") as string;
 
-  // 1. Create the permanent detailed test record
   await prisma.testEvaluation.create({
     data: {
       leadId,
@@ -359,7 +344,6 @@ export async function submitTestEvaluation(formData: FormData) {
     }
   });
 
-  // 2. Update the main Lead profile routing
   const updatedLead = await prisma.lead.update({
     where: { id: leadId },
     data: {
@@ -369,7 +353,6 @@ export async function submitTestEvaluation(formData: FormData) {
       drivingScore,
       yardTestResult,
       examinerRemarks,
-      // Push back to Sales if they fail
       feedbackStatus: examinerStatus === "Rejected" ? "Client is for Next Test" : undefined 
     }
   });
@@ -383,7 +366,6 @@ export async function submitTestEvaluation(formData: FormData) {
     }
   });
 
-  // 4. NEW: Send Notification to the Sales Rep!
   if (updatedLead.salesRepId) {
     await prisma.notification.create({
       data: {
@@ -396,7 +378,6 @@ export async function submitTestEvaluation(formData: FormData) {
   }
 }
 
-// Add this to the bottom of src/app/actions/leadActions.ts
 
 export async function editTestEvaluation(formData: FormData) {
   const session = await getServerSession(authOptions);
@@ -412,13 +393,11 @@ export async function editTestEvaluation(formData: FormData) {
   const examinerStatus = formData.get("examinerStatus") as string; 
   const examinerRemarks = formData.get("examinerRemarks") as string;
 
-  // 1. Find the Examiner's MOST RECENT test log for this client
   const latestEvaluation = await prisma.testEvaluation.findFirst({
     where: { leadId: leadId },
     orderBy: { createdAt: "desc" }
   });
 
-  // 2. Silently update that specific history log (No new row created!)
   if (latestEvaluation) {
     await prisma.testEvaluation.update({
       where: { id: latestEvaluation.id },
@@ -433,7 +412,6 @@ export async function editTestEvaluation(formData: FormData) {
     });
   }
 
-  // 3. Silently update the main Lead profile
   await prisma.lead.update({
     where: { id: leadId },
     data: {
@@ -443,10 +421,8 @@ export async function editTestEvaluation(formData: FormData) {
       drivingScore,
       yardTestResult,
       examinerRemarks,
-      feedbackStatus: examinerStatus === "Rejected" ? "Client is for Next Test" : undefined 
+      // 👈 FIXED: Look for "Denied" instead of "Rejected"
+      feedbackStatus: examinerStatus === "Denied" ? "Client is for Next Test" : undefined 
     }
   });
-
-  // NO ActivityLog created. NO Notification sent. Completely silent correction.
 }
-

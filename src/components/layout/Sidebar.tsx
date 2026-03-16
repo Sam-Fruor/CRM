@@ -19,6 +19,7 @@ export default function Sidebar() {
     // SALES TEAM
     { name: "Sales Dashboard", href: "/sales", roles: ["ADMIN", "SALES"] },
     { name: "Leads Workspace", href: "/sales/leads", roles: ["ADMIN", "SALES"] },
+    { name: "Exams & Result", href: "/sales/exams", roles: ["ADMIN", "SALES"] },
     { name: "Visual Pipeline", href: "/sales/pipeline", roles: ["ADMIN", "SALES"] },
     { name: "My Calendar", href: "/sales/calendar", roles: ["ADMIN", "SALES"] },
     { name: "Missing Documents", href: "/sales/missing-docs", roles: ["ADMIN", "SALES"] },

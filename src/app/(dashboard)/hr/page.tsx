@@ -38,13 +38,9 @@ export default async function HRDashboardPage() {
   const today = new Date();
   today.setHours(23, 59, 59, 999); 
 
-  const followUpsDue = allLeads
-    .filter(l => 
-      l.followUpDate !== null && 
-      new Date(l.followUpDate) <= today &&
-      (l.caseStatus.includes("Stage 2") || l.caseStatus.includes("Pending") || l.caseStatus.includes("Process"))
-    )
-    .sort((a, b) => new Date(a.followUpDate!).getTime() - new Date(b.followUpDate!).getTime()); 
+  const followUpsDue = allLeads.filter(l => 
+  l.hrNextFollowUpDate && new Date(l.hrNextFollowUpDate) <= today
+);
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-10">

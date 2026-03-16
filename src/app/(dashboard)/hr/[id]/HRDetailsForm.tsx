@@ -229,19 +229,26 @@ export default function HRDetailsForm({ lead }: { lead: any }) {
         </div>
       </div>
 
-      {/* 📋 8. HR Case Notes (EDITABLE) */}
+      {/* 📋 8. HR Case Notes & Follow-up (EDITABLE) */}
       <div className={`${cardStyle} border-blue-200`}>
         <h2 className={`${headerStyle} border-blue-100 flex justify-between`}>
-          <span>📋 8. HR Processing Remarks</span>
+          <span>📋 8. HR Processing Remarks & Follow-Up</span>
+          <span className="text-xs font-bold text-blue-500 bg-blue-100 px-2 py-1 rounded">Editable</span>
         </h2>
         <div className="space-y-4">
-          <div>
-            <label className={inputLabelStyle}>Last Follow-Up Email Date</label>
-            <input type="date" name="lastEmailDate" defaultValue={lead.lastEmailDate ? new Date(lead.lastEmailDate).toISOString().split('T')[0] : ''} className={inputStyle} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className={inputLabelStyle}>Last Follow-Up Date</label>
+              <input type="date" name="lastEmailDate" defaultValue={lead.lastEmailDate ? new Date(lead.lastEmailDate).toISOString().split('T')[0] : ''} className={inputStyle} />
+            </div>
+            <div>
+              <label className={inputLabelStyle}>Next Follow-Up Date</label>
+              <input type="date" name="hrNextFollowUpDate" defaultValue={lead.hrNextFollowUpDate ? new Date(lead.hrNextFollowUpDate).toISOString().split('T')[0] : ''} className={`${inputStyle} border-orange-300 bg-orange-50`} />
+            </div>
           </div>
           <div>
-            <label className={inputLabelStyle}>HR Internal Notes</label>
-            <textarea name="hrRemarks" rows={5} defaultValue={lead.hrRemarks} className={inputStyle} placeholder="Add specific notes from the HR department here..."></textarea>
+            <label className={inputLabelStyle}>HR Internal Notes / Follow-up Remarks</label>
+            <textarea name="hrRemarks" rows={4} defaultValue={lead.hrRemarks} className={inputStyle} placeholder="Add follow-up notes or internal HR processing remarks here..."></textarea>
           </div>
         </div>
       </div>

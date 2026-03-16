@@ -1,27 +1,33 @@
 // src/app/(dashboard)/sales/[id]/page.tsx
-
 import { prisma } from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import ViewLead from "./ViewLead"; 
-import DocumentVault from "@/components/DocumentVault";
 
-export default async function ViewLeadPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ViewLeadPage({ 
+  params,
+  searchParams 
+}: { 
+  params: Promise<{ id: string }>,
+  searchParams: Promise<{ tab?: string }>
+}) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
 
-  const { id } = await params;
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
+  
+  // Get current tab, default to details
+  const activeTab = resolvedSearchParams.tab || "details";
 
-  // Fetch the lead, the activity timeline, AND the exam history!
   const lead = await prisma.lead.findUnique({
-    where: { id: id },
+    where: { id: resolvedParams.id },
     include: {
       activities: {
         orderBy: { createdAt: "desc" },
         include: { user: true },
       },
-      // 👇 THIS IS THE MAGIC FIX: Fetch the hidden testing history!
       testEvaluations: {
         orderBy: { createdAt: "desc" },
       }
@@ -35,6 +41,6 @@ export default async function ViewLeadPage({ params }: { params: Promise<{ id: s
   // Sanitize dates for the client component
   const safeLead = JSON.parse(JSON.stringify(lead));
 
-  // ALWAYS return the read-only view page
-  return <ViewLead lead={safeLead} />;
+  // Pass the active tab down to the UI component
+  return <ViewLead lead={safeLead} activeTab={activeTab} />;
 }
