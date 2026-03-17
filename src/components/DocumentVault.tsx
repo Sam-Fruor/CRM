@@ -154,7 +154,7 @@ export default function DocumentVault({ leadId, existingDocs }: { leadId: string
     <div className="bg-slate-800 p-6 rounded-xl shadow-md border border-slate-700 flex flex-col h-[850px]">
       
       <h2 className="text-lg font-bold text-white border-b border-slate-600 pb-3 mb-4 shrink-0 flex justify-between">
-        <span>🗂️ Universal Document Vault</span>
+        <span>🗂️ Documents </span>
         <span className="text-xs bg-slate-700 text-slate-300 px-3 py-1 rounded-full border border-slate-600">Total: {fileEntries.length} Files</span>
       </h2>
 
@@ -191,8 +191,8 @@ export default function DocumentVault({ leadId, existingDocs }: { leadId: string
                     onChange={(e) => updateStagedFile(staged.id, 'docCategory', e.target.value)}
                     className="w-1/3 p-1.5 bg-slate-700 border border-slate-500 text-slate-200 text-xs rounded outline-none focus:ring-1 focus:ring-blue-500"
                   >
-                    <option value="Client">📄 Client Doc</option>
-                    <option value="Financial">💳 Financial</option>
+                    <option value="Client">📄 Client Docs</option>
+                    <option value="Financial">💳 Financial Docs</option>
                   </select>
 
                   <select 

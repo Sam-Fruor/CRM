@@ -4,12 +4,10 @@
 import { useState } from "react";
 import { submitTestEvaluation, editTestEvaluation } from "@/app/actions/leadActions";
 
-export default function GradeForm({ lead }: { lead: any }) {
+export default function GradeForm({ lead, attemptName = "Test Evaluation", isEditMode = false }: { lead: any, attemptName?: string, isEditMode?: boolean }) {
   const [loading, setLoading] = useState(false);
 
-  // 👇 CHANGED: Denied is now Rejected
-  const isEditMode = lead.examinerStatus === "Approved" || lead.examinerStatus === "Rejected";
-
+  // 🔥 THE FIX: If isEditMode is false (because it's a NEW attempt), it forces the form to be totally blank!
   const getDefault = (value: any) => {
     return isEditMode ? (value || "") : "";
   };
@@ -107,9 +105,13 @@ export default function GradeForm({ lead }: { lead: any }) {
         <input type="hidden" name="englishTestResult" value={engResult} />
         <input type="hidden" name="yardTestResult" value={yardResult} />
 
-        <h2 className="text-lg font-bold text-purple-900 border-b border-purple-200 pb-3 mb-6 flex justify-between items-center">
-          Test Evaluation Matrix
-          {isEditMode && <span className="text-[10px] font-bold bg-orange-100 text-orange-700 px-2 py-1 rounded uppercase tracking-wider">Edit Mode</span>}
+        <h2 className="text-lg font-bold text-purple-900 border-b border-purple-200 pb-3 mb-6 flex flex-col gap-1">
+          <span>{attemptName} Matrix</span>
+          {isEditMode ? (
+            <span className="w-fit text-[10px] font-bold bg-orange-100 text-orange-700 px-2 py-1 rounded uppercase tracking-wider">Editing Previous Grade</span>
+          ) : (
+            <span className="w-fit text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-1 rounded uppercase tracking-wider">New Submission</span>
+          )}
         </h2>
 
         <div className="flex flex-col gap-5 mb-6">
@@ -166,7 +168,6 @@ export default function GradeForm({ lead }: { lead: any }) {
           <div className="space-y-4">
             <div>
               <label className={labelStyle}>Overall Status <span className="text-red-500">*</span></label>
-              {/* 👇 CHANGED: Options updated to Rejected */}
               <select name="examinerStatus" defaultValue={getDefault(lead.examinerStatus)} required className="w-full p-2.5 bg-slate-50 border border-slate-300 text-slate-900 text-sm font-bold rounded-lg outline-none focus:ring-2 focus:ring-purple-500">
                 <option value="">Pending Decision...</option>
                 <option value="Approved">🟢 APPROVED</option>

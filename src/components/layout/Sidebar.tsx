@@ -30,6 +30,7 @@ export default function Sidebar() {
     { name: "HR Dashboard", href: "/hr", roles: ["ADMIN", "HR"] },
     // 👇 NEW TAB ADDED HERE 👇
     { name: "HR Verification", href: "/hr/verification", roles: ["ADMIN", "HR"] }, 
+    { name: "Verify Payments", href: "/hr/payments", roles: ["ADMIN", "HR"] }, 
     { name: "Examiner Pending", href: "/examiner", roles: ["ADMIN", "EXAMINER"] },
   ];
 

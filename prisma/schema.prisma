@@ -127,6 +127,15 @@ model Lead {
   serviceAgreementTotal       Float?
   serviceAgreementPaymentDate DateTime?
   paymentDate             DateTime?
+  // 🔐 Payment Verification Gates
+  testFeeVerifyStatus       String  @default("Unsubmitted")
+  testFeeRejectReason       String? // 👈 ADD THIS
+  
+  reTestFeeVerifyStatus     String  @default("Unsubmitted")
+  reTestFeeRejectReason     String? // 👈 ADD THIS
+  
+  saFeeVerifyStatus         String  @default("Unsubmitted")
+  saFeeRejectReason         String? // 👈 ADD THIS
 
   // ♾️ DYNAMIC PAYMENTS LEDGER
   otherPayments               Json      @default("[]") // 👈 ADD THIS!

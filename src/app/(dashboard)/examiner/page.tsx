@@ -18,13 +18,16 @@ export default async function ExaminerDashboardPage({ searchParams }: { searchPa
   // 1. Fetch ALL Pending Leads
   const pendingLeads = await prisma.lead.findMany({
     where: { 
+      // ✅ FIX: Explicitly include nulls (new clients) AND rejected (re-test clients)
       OR: [
         { examinerStatus: null },
         { examinerStatus: "" },
-        { examinerStatus: "Pending" }
+        { examinerStatus: "Pending" },
+        { examinerStatus: "Rejected" },
+        { examinerStatus: "Denied" }
       ]
     },
-    orderBy: { testDate: "asc" } // Sort by test date so the earliest ones show up first!
+    include: { testEvaluations: true }
   });
 
   // 2. Fetch HISTORY (Every test ever submitted)
@@ -33,15 +36,74 @@ export default async function ExaminerDashboardPage({ searchParams }: { searchPa
     orderBy: { createdAt: "desc" }
   });
 
-  // ⏱️ DATE MATH: Split Pending Leads into "Today" and "Upcoming"
+  // 3. ENHANCE LEADS WITH ACTIVE TEST DATA
+  const processedLeads = pendingLeads.map(lead => {
+    const evalsCount = lead.testEvaluations?.length || 0;
+    let activeDate = null;
+    let attemptName = "Initial Test";
+
+    // Safely parse the dynamic JSON ledger
+    let customPayments: any[] = [];
+    try {
+      if (lead.otherPayments) {
+        customPayments = Array.isArray(lead.otherPayments) ? lead.otherPayments : JSON.parse(lead.otherPayments as string);
+      }
+    } catch (e) {
+      console.error("Failed to parse otherPayments for lead", lead.id);
+    }
+
+    if (evalsCount === 0) {
+      attemptName = "Initial Test";
+      activeDate = lead.testDate;
+      // Check if there is an active Reschedule overriding the Initial Test
+      const reschedules = customPayments.filter(p => p.isAutoReschedule && p.attempt === 1 && p.testDate);
+      if (reschedules.length > 0) {
+        activeDate = reschedules[reschedules.length - 1].testDate;
+        attemptName = "Initial Test (Rescheduled)";
+      }
+    } else if (evalsCount === 1) {
+      attemptName = "Re-Test (Attempt 2)";
+      activeDate = lead.reTestDate;
+      // Check if there is an active Reschedule overriding Attempt 2
+      const reschedules = customPayments.filter(p => p.isAutoReschedule && p.attempt === 2 && p.testDate);
+      if (reschedules.length > 0) {
+        activeDate = reschedules[reschedules.length - 1].testDate;
+        attemptName = "Re-Test (Attempt 2 - Rescheduled)";
+      }
+    } else {
+      const attemptNum = evalsCount + 1;
+      attemptName = `Re-Test (Attempt ${attemptNum})`;
+      // Find the Attempt 3+ row
+      const retestRow = customPayments.find(p => p.isAutoRetest && p.attempt === attemptNum);
+      if (retestRow && retestRow.testDate) activeDate = retestRow.testDate;
+
+      // Check if there is an active Reschedule overriding Attempt 3+
+      const reschedules = customPayments.filter(p => p.isAutoReschedule && p.attempt === attemptNum && p.testDate);
+      if (reschedules.length > 0) {
+        activeDate = reschedules[reschedules.length - 1].testDate;
+        attemptName = `Re-Test (Attempt ${attemptNum} - Rescheduled)`;
+      }
+    }
+
+    return {
+      ...lead,
+      activeTestDate: activeDate,
+      activeAttemptName: attemptName
+    };
+  });
+
+  // ⏱️ DATE MATH: Split Processed Leads into "Today" and "Upcoming"
   const now = new Date();
   const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
+  // Filter out people with NO active date, then sort
+  const scheduledLeads = processedLeads.filter(l => l.activeTestDate).sort((a, b) => new Date(a.activeTestDate as string).getTime() - new Date(b.activeTestDate as string).getTime());
+
   // "Today's Roster" includes tests scheduled for today, AND any tests from yesterday that were missed
-  const todaysRoster = pendingLeads.filter(l => l.testDate && new Date(l.testDate) <= endOfToday);
+  const todaysRoster = scheduledLeads.filter(l => new Date(l.activeTestDate as string) <= endOfToday);
   
-  // "Upcoming" includes tests in the future, or leads that Sales hasn't assigned a test date to yet
-  const upcomingRoster = pendingLeads.filter(l => !l.testDate || new Date(l.testDate) > endOfToday);
+  // "Upcoming" includes tests in the future
+  const upcomingRoster = scheduledLeads.filter(l => new Date(l.activeTestDate as string) > endOfToday);
 
   // A reusable component for the tables so we don't write the exact same code twice!
   const RosterTable = ({ leads, emptyMessage }: { leads: any[], emptyMessage: string }) => (
@@ -50,7 +112,7 @@ export default async function ExaminerDashboardPage({ searchParams }: { searchPa
         <thead>
           <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-bold">
             <th className="p-4">Candidate Details</th>
-            <th className="p-4">Test Date</th>
+            <th className="p-4">Test Date & Attempt</th>
             <th className="p-4">Category</th>
             <th className="p-4 text-right">Action</th>
           </tr>
@@ -67,12 +129,13 @@ export default async function ExaminerDashboardPage({ searchParams }: { searchPa
                 </td>
                 <td className="p-4">
                   <span className={`px-2.5 py-1 text-xs font-bold rounded-lg ${
-                    lead.testDate && new Date(lead.testDate) <= endOfToday 
-                      ? "bg-amber-100 text-amber-700" // Highlight today's dates in orange!
+                    new Date(lead.activeTestDate) <= endOfToday 
+                      ? "bg-amber-100 text-amber-700" 
                       : "bg-slate-100 text-slate-600"
                   }`}>
-                    {lead.testDate ? new Date(lead.testDate).toLocaleDateString() : "Unscheduled"}
+                    {new Date(lead.activeTestDate).toLocaleDateString()}
                   </span>
+                  <p className="text-[10px] text-slate-400 mt-1.5 font-bold uppercase">{lead.activeAttemptName}</p>
                 </td>
                 <td className="p-4 font-medium text-slate-700">{lead.category}</td>
                 <td className="p-4 text-right">
@@ -110,7 +173,7 @@ export default async function ExaminerDashboardPage({ searchParams }: { searchPa
               : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
           }`}
         >
-          Pending Queue ({pendingLeads.length})
+          Pending Queue ({todaysRoster.length + upcomingRoster.length})
         </Link>
         <Link 
           href="?tab=history" 

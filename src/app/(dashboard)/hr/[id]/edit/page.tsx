@@ -1,10 +1,9 @@
-// src/app/(dashboard)/hr/[id]/edit/page.tsx
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { updateHRFile } from "@/app/actions/hrActions"; // Reuse the action to save it!
+import { updateHRFile } from "@/app/actions/hrActions";
 
 export default async function HREditProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
@@ -19,11 +18,11 @@ export default async function HREditProfilePage({ params }: { params: Promise<{ 
 
   if (!lead) notFound();
 
-  // Create an inline Server Action to handle the form save and redirect back
+  // Inline Server Action to handle the form save and redirect back
   async function saveProfileData(formData: FormData) {
     "use server";
     await updateHRFile(lead!.id, formData);
-    redirect(`/hr/${lead!.id}?tab=details`); // Send them back to the Read-Only screen
+    redirect(`/hr/${lead!.id}?tab=details`);
   }
 
   const inputStyle = "w-full p-2.5 bg-white border border-slate-300 text-slate-900 text-sm rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-medium shadow-sm";
@@ -49,7 +48,7 @@ export default async function HREditProfilePage({ params }: { params: Promise<{ 
 
       <form action={saveProfileData} className="bg-blue-50/50 p-6 rounded-xl shadow-sm border border-blue-200">
         
-        {/* We pass these hidden fields so the server action doesn't wipe the HR/Ops data! */}
+        {/* Hidden fields so the server action doesn't wipe the HR/Ops data */}
         <input type="hidden" name="caseStatus" value={lead.caseStatus} />
         <input type="hidden" name="serviceAgreementPending" value={lead.serviceAgreementPending || ""} />
         <input type="hidden" name="jobOfferPending" value={lead.jobOfferPending || ""} />

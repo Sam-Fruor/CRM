@@ -27,6 +27,51 @@ export default async function ExaminerProfileView({ params }: { params: Promise<
 
   if (!lead) redirect("/examiner");
 
+  const evalsCount = lead.testEvaluations.length;
+  let currentAttemptTarget = 1;
+  let currentAttemptName = "Initial Test (Attempt 1)";
+
+  let customPayments: any[] = [];
+  try {
+    if (lead.otherPayments) customPayments = Array.isArray(lead.otherPayments) ? lead.otherPayments : JSON.parse(lead.otherPayments as string);
+  } catch (e) {}
+
+  // 🛑 INJECT NO-SHOWS INTO CANDIDATE HISTORY
+  let combinedHistory = lead.testEvaluations.map(t => ({ ...t, isMissed: false }));
+
+  const resched1 = customPayments.find(p => p.isAutoReschedule && p.attempt === 1 && p.testDate);
+  if (resched1 && lead.testDate) combinedHistory.push({ id: 'noshow-1', createdAt: new Date(lead.testDate), englishScore: "-", drivingScore: "-", englishTestResult: "Absent", yardTestResult: "Absent", status: "No-Show", isMissed: true } as any);
+
+  const resched2 = customPayments.find(p => p.isAutoReschedule && p.attempt === 2 && p.testDate);
+  if (resched2 && lead.reTestDate) combinedHistory.push({ id: 'noshow-2', createdAt: new Date(lead.reTestDate), englishScore: "-", drivingScore: "-", englishTestResult: "Absent", yardTestResult: "Absent", status: "No-Show", isMissed: true } as any);
+
+  customPayments.filter(p => p.isAutoReschedule && p.attempt > 2 && p.testDate).forEach(resched => {
+    const orig = customPayments.find(p => p.isAutoRetest && p.attempt === resched.attempt);
+    if (orig && orig.testDate) combinedHistory.push({ id: `noshow-${resched.attempt}`, createdAt: new Date(orig.testDate), englishScore: "-", drivingScore: "-", englishTestResult: "Absent", yardTestResult: "Absent", status: "No-Show", isMissed: true } as any);
+  });
+
+  // Sort candidate history
+  combinedHistory.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  // Detect Attempt Number
+  const attempt3Plus = customPayments.filter(p => p.isAutoRetest && p.testDate);
+  if (attempt3Plus.length > 0) {
+    const highestAttempt = Math.max(...attempt3Plus.map(p => p.attempt));
+    currentAttemptTarget = highestAttempt;
+    currentAttemptName = `Re-Test (Attempt ${highestAttempt})`;
+  } else if (lead.reTestDate) {
+    currentAttemptTarget = 2;
+    currentAttemptName = "Re-Test (Attempt 2)";
+  } else if (lead.testDate) {
+    currentAttemptTarget = 1;
+    currentAttemptName = "Initial Test (Attempt 1)";
+  }
+
+  const activeReschedules = customPayments.filter(p => p.isAutoReschedule && p.attempt === currentAttemptTarget && p.testDate);
+  if (activeReschedules.length > 0) currentAttemptName += " - Rescheduled";
+
+  const isEditMode = evalsCount >= currentAttemptTarget;
+
   const sectionStyle = "bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-6";
   const labelStyle = "text-xs font-bold text-slate-500 uppercase tracking-wider mb-1";
   const valueStyle = "text-sm font-semibold text-slate-800 bg-slate-50 p-2.5 rounded-lg border border-slate-100";
@@ -58,7 +103,6 @@ export default async function ExaminerProfileView({ params }: { params: Promise<
         {/* LEFT COLUMN: READ-ONLY DATA */}
         <div className="lg:col-span-2 space-y-6">
           
-          {/* Candidate Details */}
           <div className={sectionStyle}>
             <h2 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-3 mb-4">
               Candidate Information
@@ -66,14 +110,13 @@ export default async function ExaminerProfileView({ params }: { params: Promise<
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div><p className={labelStyle}>Full Name</p><p className={valueStyle}>{lead.givenName} {lead.surname}</p></div>
               <div><p className={labelStyle}>Nationality</p><p className={valueStyle}>{lead.nationality}</p></div>
-              <div><p className={labelStyle}>Date of Birth</p><p className={valueStyle}>{lead.dob ? new Date(lead.dob).toLocaleDateString() : "N/A"}</p></div>
+              <div><p className={labelStyle}>Date of Birth</p><p className={valueStyle}>{lead.dob ? new Date(lead.dob).toLocaleDateString("en-GB") : "N/A"}</p></div>
               <div><p className={labelStyle}>Phone</p><p className={valueStyle}>{lead.callingNumber}</p></div>
               <div><p className={labelStyle}>Home Exp (Yrs)</p><p className={valueStyle}>{lead.experienceHome || "0"}</p></div>
               <div><p className={labelStyle}>GCC Exp (Yrs)</p><p className={valueStyle}>{lead.experienceGCC || "0"}</p></div>
             </div>
           </div>
 
-          {/* Documents & IDs */}
           <div className={sectionStyle}>
             <h2 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-3 mb-4">
               Provided Documents
@@ -96,31 +139,36 @@ export default async function ExaminerProfileView({ params }: { params: Promise<
               📋 Past Evaluation History
             </h2>
             
-            {lead.testEvaluations.length === 0 ? (
+            {combinedHistory.length === 0 ? (
               <p className="text-sm text-slate-400 italic">This is the candidate's first test attempt.</p>
             ) : (
               <div className="space-y-4">
-                {lead.testEvaluations.map((test) => (
-                  <div key={test.id} className="bg-slate-700/50 p-4 rounded-lg border border-slate-600">
+                {combinedHistory.map((test: any, index: number) => (
+                  <div key={test.id} className={`p-4 rounded-lg border ${test.isMissed ? 'bg-orange-900/30 border-orange-800/50' : 'bg-slate-700/50 border-slate-600'}`}>
                     <div className="flex justify-between items-start mb-3">
-                      <span className={`px-2.5 py-1 text-xs font-bold rounded-full ${
-                        test.status === "Approved" ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"
+                      <span className={`px-2.5 py-1 text-[10px] uppercase font-bold rounded-full border ${
+                        test.isMissed ? "bg-orange-500/20 text-orange-400 border-orange-500/30" :
+                        test.status === "Approved" ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-red-500/20 text-red-400 border-red-500/30"
                       }`}>
                         {test.status}
                       </span>
                       <span className="text-xs text-slate-400 font-medium">
-                        {new Date(test.createdAt).toLocaleDateString()}
+                        {new Date(test.createdAt).toLocaleDateString("en-GB")}
                       </span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 mb-3 text-sm bg-slate-800/50 p-3 rounded border border-slate-600">
+                    <div className={`grid grid-cols-2 gap-4 mb-3 text-sm p-3 rounded border ${test.isMissed ? 'bg-orange-950/40 border-orange-800/30' : 'bg-slate-800/50 border-slate-600'}`}>
                       <div>
-                        <p className="text-slate-400 text-xs uppercase">English</p>
-                        <p className="font-bold">{test.englishScore}/10 <span className="text-slate-400 font-normal">({test.englishTestResult})</span></p>
+                        <p className={`text-xs uppercase ${test.isMissed ? 'text-orange-500/70' : 'text-slate-400'}`}>English</p>
+                        <p className={`font-bold ${test.isMissed ? 'text-orange-400' : 'text-white'}`}>
+                          {test.englishScore !== "-" ? `${test.englishScore}/10` : "-"} <span className={`font-normal ${test.isMissed ? 'text-orange-500' : 'text-slate-400'}`}>({test.englishTestResult})</span>
+                        </p>
                       </div>
                       <div>
-                        <p className="text-slate-400 text-xs uppercase">Driving</p>
-                        <p className="font-bold">{test.drivingScore}/10 <span className="text-slate-400 font-normal">({test.yardTestResult})</span></p>
+                        <p className={`text-xs uppercase ${test.isMissed ? 'text-orange-500/70' : 'text-slate-400'}`}>Driving</p>
+                        <p className={`font-bold ${test.isMissed ? 'text-orange-400' : 'text-white'}`}>
+                          {test.drivingScore !== "-" ? `${test.drivingScore}/10` : "-"} <span className={`font-normal ${test.isMissed ? 'text-orange-500' : 'text-slate-400'}`}>({test.yardTestResult})</span>
+                        </p>
                       </div>
                     </div>
 
@@ -139,8 +187,7 @@ export default async function ExaminerProfileView({ params }: { params: Promise<
 
         {/* RIGHT COLUMN: GRADING FORM */}
         <div className="lg:col-span-1">
-          {/* 👇 This is the fix! Passing the whole lead object. */}
-          <GradeForm lead={lead} />
+          <GradeForm lead={lead} attemptName={currentAttemptName} isEditMode={isEditMode} />
         </div>
 
       </div>
