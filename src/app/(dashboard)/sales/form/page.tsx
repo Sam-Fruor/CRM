@@ -5,49 +5,228 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createLead, checkDuplicateLead } from "@/app/actions/leadActions";
 
+// 🌍 COMPREHENSIVE NATIONALITY LIST (Alphabetical)
 const COUNTRY_LIST = [
-  "Bahrain", "Bangladesh", "Croatia", "Egypt", "India", 
-  "Kuwait", "Latvia", "Lithuania", "Nepal", "Oman", 
-  "Pakistan", "Philippines", "Poland", "Qatar", "Romania", 
-  "Saudi Arabia", "Serbia", "Sri Lanka", "United Arab Emirates", 
-  "United Kingdom", "Other"
-].sort();
+  "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria", "Azerbaijan", 
+  "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi", 
+  "Cabo Verde", "Cambodia", "Cameroon", "Canada", "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo", "Costa Rica", "Croatia", "Cuba", "Cyprus", "Czech Republic", 
+  "Denmark", "Djibouti", "Dominica", "Dominican Republic", 
+  "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia", 
+  "Fiji", "Finland", "France", 
+  "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau", "Guyana", 
+  "Haiti", "Honduras", "Hungary", 
+  "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy", 
+  "Jamaica", "Japan", "Jordan", 
+  "Kazakhstan", "Kenya", "Kiribati", "Kuwait", "Kyrgyzstan", 
+  "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania", "Luxembourg", 
+  "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar", 
+  "Namibia", "Nauru", "Nepal", "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Korea", "North Macedonia", "Norway", 
+  "Oman", 
+  "Pakistan", "Palau", "Palestine", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal", 
+  "Qatar", 
+  "Romania", "Russia", "Rwanda", 
+  "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent", "Samoa", "San Marino", "Sao Tome and Principe", "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands", "Somalia", "South Africa", "South Korea", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland", "Syria", 
+  "Tajikistan", "Tanzania", "Thailand", "Timor-Leste", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia", "Turkey", "Turkmenistan", "Tuvalu", 
+  "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "Uruguay", "Uzbekistan", 
+  "Vanuatu", "Vatican City", "Venezuela", "Vietnam", 
+  "Yemen", 
+  "Zambia", "Zimbabwe", "Other"
+];
 
-const FEEDBACK_OPTIONS = [
-  "Converted",
-  "Not Responding",
-  "Not Interested",
-  "Not Eligible",
-  "Client is for Next Test"
+// 📞 COMPREHENSIVE COUNTRY CODES (Alphabetical by Country)
+const COUNTRY_CODES = [
+  { code: "+93", label: "🇦🇫 +93 (Afghanistan)" },
+  { code: "+355", label: "🇦🇱 +355 (Albania)" },
+  { code: "+213", label: "🇩🇿 +213 (Algeria)" },
+  { code: "+376", label: "🇦🇩 +376 (Andorra)" },
+  { code: "+244", label: "🇦🇴 +244 (Angola)" },
+  { code: "+54", label: "🇦🇷 +54 (Argentina)" },
+  { code: "+374", label: "🇦🇲 +374 (Armenia)" },
+  { code: "+61", label: "🇦🇺 +61 (Australia)" },
+  { code: "+43", label: "🇦🇹 +43 (Austria)" },
+  { code: "+994", label: "🇦🇿 +994 (Azerbaijan)" },
+  { code: "+973", label: "🇧🇭 +973 (Bahrain)" },
+  { code: "+880", label: "🇧🇩 +880 (Bangladesh)" },
+  { code: "+375", label: "🇧🇾 +375 (Belarus)" },
+  { code: "+32", label: "🇧🇪 +32 (Belgium)" },
+  { code: "+501", label: "🇧🇿 +501 (Belize)" },
+  { code: "+229", label: "🇧🇯 +229 (Benin)" },
+  { code: "+975", label: "🇧🇹 +975 (Bhutan)" },
+  { code: "+591", label: "🇧🇴 +591 (Bolivia)" },
+  { code: "+387", label: "🇧🇦 +387 (Bosnia)" },
+  { code: "+267", label: "🇧🇼 +267 (Botswana)" },
+  { code: "+55", label: "🇧🇷 +55 (Brazil)" },
+  { code: "+673", label: "🇧🇳 +673 (Brunei)" },
+  { code: "+359", label: "🇧🇬 +359 (Bulgaria)" },
+  { code: "+226", label: "🇧🇫 +226 (Burkina Faso)" },
+  { code: "+257", label: "🇧🇮 +257 (Burundi)" },
+  { code: "+855", label: "🇰🇭 +855 (Cambodia)" },
+  { code: "+237", label: "🇨🇲 +237 (Cameroon)" },
+  { code: "+1", label: "🇨🇦 +1 (Canada)" },
+  { code: "+236", label: "🇨🇫 +236 (CAR)" },
+  { code: "+235", label: "🇹🇩 +235 (Chad)" },
+  { code: "+56", label: "🇨🇱 +56 (Chile)" },
+  { code: "+86", label: "🇨🇳 +86 (China)" },
+  { code: "+57", label: "🇨🇴 +57 (Colombia)" },
+  { code: "+242", label: "🇨🇬 +242 (Congo)" },
+  { code: "+506", label: "🇨🇷 +506 (Costa Rica)" },
+  { code: "+385", label: "🇭🇷 +385 (Croatia)" },
+  { code: "+53", label: "🇨🇺 +53 (Cuba)" },
+  { code: "+357", label: "🇨🇾 +357 (Cyprus)" },
+  { code: "+420", label: "🇨🇿 +420 (Czechia)" },
+  { code: "+45", label: "🇩🇰 +45 (Denmark)" },
+  { code: "+253", label: "🇩🇯 +253 (Djibouti)" },
+  { code: "+1809", label: "🇩🇴 +1809 (Dominican Rep)" },
+  { code: "+593", label: "🇪🇨 +593 (Ecuador)" },
+  { code: "+20", label: "🇪🇬 +20 (Egypt)" },
+  { code: "+503", label: "🇸🇻 +503 (El Salvador)" },
+  { code: "+372", label: "🇪🇪 +372 (Estonia)" },
+  { code: "+251", label: "🇪🇹 +251 (Ethiopia)" },
+  { code: "+679", label: "🇫🇯 +679 (Fiji)" },
+  { code: "+358", label: "🇫🇮 +358 (Finland)" },
+  { code: "+33", label: "🇫🇷 +33 (France)" },
+  { code: "+241", label: "🇬🇦 +241 (Gabon)" },
+  { code: "+220", label: "🇬🇲 +220 (Gambia)" },
+  { code: "+995", label: "🇬🇪 +995 (Georgia)" },
+  { code: "+49", label: "🇩🇪 +49 (Germany)" },
+  { code: "+233", label: "🇬🇭 +233 (Ghana)" },
+  { code: "+30", label: "🇬🇷 +30 (Greece)" },
+  { code: "+502", label: "🇬🇹 +502 (Guatemala)" },
+  { code: "+224", label: "🇬🇳 +224 (Guinea)" },
+  { code: "+504", label: "🇭🇳 +504 (Honduras)" },
+  { code: "+36", label: "🇭🇺 +36 (Hungary)" },
+  { code: "+354", label: "🇮🇸 +354 (Iceland)" },
+  { code: "+91", label: "🇮🇳 +91 (India)" },
+  { code: "+62", label: "🇮🇩 +62 (Indonesia)" },
+  { code: "+98", label: "🇮🇷 +98 (Iran)" },
+  { code: "+964", label: "🇮🇶 +964 (Iraq)" },
+  { code: "+353", label: "🇮🇪 +353 (Ireland)" },
+  { code: "+972", label: "🇮🇱 +972 (Israel)" },
+  { code: "+39", label: "🇮🇹 +39 (Italy)" },
+  { code: "+1876", label: "🇯🇲 +1876 (Jamaica)" },
+  { code: "+81", label: "🇯🇵 +81 (Japan)" },
+  { code: "+962", label: "🇯🇴 +962 (Jordan)" },
+  { code: "+7", label: "🇰🇿 +7 (Kazakhstan)" },
+  { code: "+254", label: "🇰🇪 +254 (Kenya)" },
+  { code: "+965", label: "🇰🇼 +965 (Kuwait)" },
+  { code: "+996", label: "🇰🇬 +996 (Kyrgyzstan)" },
+  { code: "+856", label: "🇱🇦 +856 (Laos)" },
+  { code: "+371", label: "🇱🇻 +371 (Latvia)" },
+  { code: "+961", label: "🇱🇧 +961 (Lebanon)" },
+  { code: "+218", label: "🇱🇾 +218 (Libya)" },
+  { code: "+370", label: "🇱🇹 +370 (Lithuania)" },
+  { code: "+352", label: "🇱🇺 +352 (Luxembourg)" },
+  { code: "+261", label: "🇲🇬 +261 (Madagascar)" },
+  { code: "+265", label: "🇲🇼 +265 (Malawi)" },
+  { code: "+60", label: "🇲🇾 +60 (Malaysia)" },
+  { code: "+960", label: "🇲🇻 +960 (Maldives)" },
+  { code: "+223", label: "🇲🇱 +223 (Mali)" },
+  { code: "+356", label: "🇲🇹 +356 (Malta)" },
+  { code: "+230", label: "🇲🇺 +230 (Mauritius)" },
+  { code: "+52", label: "🇲🇽 +52 (Mexico)" },
+  { code: "+373", label: "🇲🇩 +373 (Moldova)" },
+  { code: "+377", label: "🇲🇨 +377 (Monaco)" },
+  { code: "+976", label: "🇲🇳 +976 (Mongolia)" },
+  { code: "+382", label: "🇲🇪 +382 (Montenegro)" },
+  { code: "+212", label: "🇲🇦 +212 (Morocco)" },
+  { code: "+258", label: "🇲🇿 +258 (Mozambique)" },
+  { code: "+95", label: "🇲🇲 +95 (Myanmar)" },
+  { code: "+264", label: "🇳🇦 +264 (Namibia)" },
+  { code: "+977", label: "🇳🇵 +977 (Nepal)" },
+  { code: "+31", label: "🇳🇱 +31 (Netherlands)" },
+  { code: "+64", label: "🇳🇿 +64 (New Zealand)" },
+  { code: "+505", label: "🇳🇮 +505 (Nicaragua)" },
+  { code: "+227", label: "🇳🇪 +227 (Niger)" },
+  { code: "+234", label: "🇳🇬 +234 (Nigeria)" },
+  { code: "+389", label: "🇲🇰 +389 (North Macedonia)" },
+  { code: "+47", label: "🇳🇴 +47 (Norway)" },
+  { code: "+968", label: "🇴🇲 +968 (Oman)" },
+  { code: "+92", label: "🇵🇰 +92 (Pakistan)" },
+  { code: "+970", label: "🇵🇸 +970 (Palestine)" },
+  { code: "+507", label: "🇵🇦 +507 (Panama)" },
+  { code: "+595", label: "🇵🇾 +595 (Paraguay)" },
+  { code: "+51", label: "🇵🇪 +51 (Peru)" },
+  { code: "+63", label: "🇵🇭 +63 (Philippines)" },
+  { code: "+48", label: "🇵🇱 +48 (Poland)" },
+  { code: "+351", label: "🇵🇹 +351 (Portugal)" },
+  { code: "+974", label: "🇶🇦 +974 (Qatar)" },
+  { code: "+40", label: "🇷🇴 +40 (Romania)" },
+  { code: "+7", label: "🇷🇺 +7 (Russia)" },
+  { code: "+250", label: "🇷🇼 +250 (Rwanda)" },
+  { code: "+966", label: "🇸🇦 +966 (Saudi Arabia)" },
+  { code: "+221", label: "🇸🇳 +221 (Senegal)" },
+  { code: "+381", label: "🇷🇸 +381 (Serbia)" },
+  { code: "+248", label: "🇸🇨 +248 (Seychelles)" },
+  { code: "+232", label: "🇸🇱 +232 (Sierra Leone)" },
+  { code: "+65", label: "🇸🇬 +65 (Singapore)" },
+  { code: "+421", label: "🇸🇰 +421 (Slovakia)" },
+  { code: "+386", label: "🇸🇮 +386 (Slovenia)" },
+  { code: "+252", label: "🇸🇴 +252 (Somalia)" },
+  { code: "+27", label: "🇿🇦 +27 (South Africa)" },
+  { code: "+82", label: "🇰🇷 +82 (South Korea)" },
+  { code: "+34", label: "🇪🇸 +34 (Spain)" },
+  { code: "+94", label: "🇱🇰 +94 (Sri Lanka)" },
+  { code: "+249", label: "🇸🇩 +249 (Sudan)" },
+  { code: "+46", label: "🇸🇪 +46 (Sweden)" },
+  { code: "+41", label: "🇨🇭 +41 (Switzerland)" },
+  { code: "+963", label: "🇸🇾 +963 (Syria)" },
+  { code: "+992", label: "🇹🇯 +992 (Tajikistan)" },
+  { code: "+255", label: "🇹🇿 +255 (Tanzania)" },
+  { code: "+66", label: "🇹🇭 +66 (Thailand)" },
+  { code: "+228", label: "🇹🇬 +228 (Togo)" },
+  { code: "+216", label: "🇹🇳 +216 (Tunisia)" },
+  { code: "+90", label: "🇹🇷 +90 (Turkey)" },
+  { code: "+993", label: "🇹🇲 +993 (Turkmenistan)" },
+  { code: "+256", label: "🇺🇬 +256 (Uganda)" },
+  { code: "+380", label: "🇺🇦 +380 (Ukraine)" },
+  { code: "+971", label: "🇦🇪 +971 (United Arab Emirates)" },
+  { code: "+44", label: "🇬🇧 +44 (United Kingdom)" },
+  { code: "+1", label: "🇺🇸 +1 (United States)" },
+  { code: "+598", label: "🇺🇾 +598 (Uruguay)" },
+  { code: "+998", label: "🇺🇿 +998 (Uzbekistan)" },
+  { code: "+58", label: "🇻🇪 +58 (Venezuela)" },
+  { code: "+84", label: "🇻🇳 +84 (Vietnam)" },
+  { code: "+967", label: "🇾🇪 +967 (Yemen)" },
+  { code: "+260", label: "🇿🇲 +260 (Zambia)" },
+  { code: "+263", label: "🇿🇼 +263 (Zimbabwe)" }
 ];
 
 export default function NewLeadPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  
-  // Track if the user has typed anything for the warnings
   const [isDirty, setIsDirty] = useState(false);
   
   const [dob, setDob] = useState("");
   const [hasPreviousAgency, setHasPreviousAgency] = useState(false);
   const [hasPreviousCountry, setHasPreviousCountry] = useState(false);
 
-  // State for conditionals
   const [leadSource, setLeadSource] = useState("");
   const [category, setCategory] = useState("");
   const [countryPreferred, setCountryPreferred] = useState("");
-  const [feedbackSelect, setFeedbackSelect] = useState("");
 
-  // 🔎 LIVE FORM DATA TRACKER (For Duplicate Scanner)
+  // 📱 Phone State Management
+  const [phoneCode, setPhoneCode] = useState("+971");
+  const [phoneBody, setPhoneBody] = useState("");
+  const [waCode, setWaCode] = useState("+971");
+  const [waBody, setWaBody] = useState("");
+
   const [formDataTracker, setFormDataTracker] = useState({
     callingNumber: "",
     passportNum: ""
   });
 
-  // 🚨 DUPLICATE ALERT STATE
   const [duplicateAlert, setDuplicateAlert] = useState<{message: string} | null>(null);
 
-  // 🛑 1. WARN BEFORE LEAVING (Native Browser Refresh/Close)
+  // Update Tracker when Phone changes
+  useEffect(() => {
+    if (phoneBody.length > 4) {
+      setFormDataTracker(prev => ({ ...prev, callingNumber: `${phoneCode} ${phoneBody}` }));
+    } else {
+      setFormDataTracker(prev => ({ ...prev, callingNumber: "" }));
+    }
+  }, [phoneCode, phoneBody]);
+
+  // 🛑 1. WARN BEFORE LEAVING
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (isDirty) {
@@ -59,19 +238,14 @@ export default function NewLeadPage() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [isDirty]);
 
-  // 🛑 2. GLOBAL CLICK WARNING (Next.js Sidebar Links & Sign Out)
+  // 🛑 2. GLOBAL CLICK WARNING
   useEffect(() => {
     const handleGlobalClick = (e: MouseEvent) => {
       if (!isDirty) return;
-
       const target = e.target as HTMLElement;
       const anchor = target.closest("a");
       const button = target.closest("button");
-
-      // Ignore our own form buttons
-      if (button && (button.type === "submit" || button.id === "cancel-button")) {
-        return;
-      }
+      if (button && (button.type === "submit" || button.id === "cancel-button")) return;
 
       if (anchor || button) {
         if (!window.confirm("You have unsaved changes. Are you sure you want to leave this page?")) {
@@ -80,12 +254,11 @@ export default function NewLeadPage() {
         }
       }
     };
-
     document.addEventListener("click", handleGlobalClick, { capture: true });
     return () => document.removeEventListener("click", handleGlobalClick, { capture: true });
   }, [isDirty]);
 
-  // 🛑 3. THE GLOBAL DUPLICATE SCANNER
+  // 🛑 3. DUPLICATE SCANNER
   useEffect(() => {
     const phone = formDataTracker.callingNumber;
     const passport = formDataTracker.passportNum;
@@ -113,7 +286,6 @@ export default function NewLeadPage() {
     return () => clearTimeout(delayDebounceFn);
   }, [formDataTracker.callingNumber, formDataTracker.passportNum]);
 
-
   const calculateAge = (dobString: string) => {
     if (!dobString) return null;
     const birthDate = new Date(dobString);
@@ -130,9 +302,23 @@ export default function NewLeadPage() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    setIsDirty(false); // Turn off warning since we are saving
+    setIsDirty(false); 
     
     const formData = new FormData(e.currentTarget);
+    
+    // 🛠️ Merge Phone Numbers before sending to backend
+    formData.set("callingNumber", `${phoneCode} ${phoneBody}`);
+    if (waBody) {
+      formData.set("whatsappNumber", `${waCode} ${waBody}`);
+    } else {
+      formData.delete("whatsappNumber"); // Keep clean if empty
+    }
+
+    // Clean up the temporary UI fields so they don't bloat the payload
+    formData.delete("phoneCode");
+    formData.delete("phoneBody");
+    formData.delete("waCode");
+    formData.delete("waBody");
     
     try {
       await createLead(formData);
@@ -141,42 +327,47 @@ export default function NewLeadPage() {
     } catch (error) {
       console.error("Failed to create lead:", error);
       setLoading(false);
-      setIsDirty(true); // Turn warning back on if save failed
+      setIsDirty(true);
     }
   };
 
-  const inputStyle = "w-full p-2.5 bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg outline-none focus:ring-2 focus:ring-blue-500 transition-all";
-  const labelStyle = "block text-sm font-semibold text-slate-700 mb-1.5";
-  const sectionStyle = "bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-6";
+  // 🎨 STYLING SYSTEM
+  const inputStyle = "w-full p-3 bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 transition-all duration-200 shadow-sm";
+  const labelStyle = "block text-[13px] font-bold text-slate-600 mb-1.5 uppercase tracking-wide";
+  const sectionStyle = "bg-white p-8 rounded-2xl shadow-sm border border-slate-100 mb-8 relative overflow-hidden";
+  const sectionAccent = "absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-500";
 
   return (
-    <div className="max-w-4xl mx-auto pb-10">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Add New Lead</h1>
-        <p className="text-slate-500 text-sm">Create a new client profile and start the Stage 1 onboarding process.</p>
+    <div className="max-w-4xl mx-auto pb-12 pt-4">
+      <div className="mb-8">
+        <h1 className="text-3xl font-black text-slate-800 tracking-tight">Add New Lead</h1>
+        <p className="text-slate-500 mt-2 text-base">Create a new client profile and initiate the Stage 1 onboarding pipeline.</p>
       </div>
 
       <form onSubmit={handleSubmit} onChange={() => setIsDirty(true)}>
         
-        {/* 🚨 DUPLICATE ALERT BANNER */}
+        {/* 🚨 DUPLICATE ALERT */}
         {duplicateAlert && (
-          <div className="bg-red-50 border-2 border-red-500 text-red-700 p-6 rounded-xl mb-6 flex items-center gap-4 shadow-sm animate-in fade-in slide-in-from-top-4">
-            <span className="text-3xl">🛑</span>
+          <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-5 rounded-r-2xl mb-8 flex items-center gap-5 shadow-sm animate-in fade-in slide-in-from-top-4">
+            <span className="text-4xl bg-white rounded-full p-2 shadow-sm">🛑</span>
             <div>
-              <h3 className="font-bold text-lg">Duplicate File Detected!</h3>
-              <p className="font-medium">{duplicateAlert.message}</p>
+              <h3 className="font-black text-lg tracking-tight">Duplicate File Detected!</h3>
+              <p className="font-medium mt-0.5 opacity-90">{duplicateAlert.message}</p>
             </div>
           </div>
         )}
 
         {/* 1. ROUTING INFORMATION */}
         <div className={sectionStyle}>
-          <h2 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-3 mb-4">1. Routing Information</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className={sectionAccent}></div>
+          <h2 className="text-xl font-black text-slate-800 border-b border-slate-100 pb-4 mb-6 flex items-center gap-2">
+            📍 1. Routing Information
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <label className={labelStyle}>Lead Source <span className="text-red-500">*</span></label>
               <select name="leadSource" value={leadSource} onChange={(e) => setLeadSource(e.target.value)} required className={inputStyle}>
-                <option value="">Select...</option>
+                <option value="">Select Source...</option>
                 <option value="Facebook">Facebook</option>
                 <option value="TikTok">TikTok</option>
                 <option value="WhatsApp">WhatsApp</option>
@@ -184,33 +375,32 @@ export default function NewLeadPage() {
                 <option value="Others">Others</option>
               </select>
               {leadSource === "Others" && (
-                <input type="text" name="leadSourceOther" placeholder="Specify source" className={`mt-2 ${inputStyle}`} required />
+                <input type="text" name="leadSourceOther" placeholder="Specify source" className={`mt-3 ${inputStyle}`} required />
               )}
             </div>
             <div>
               <label className={labelStyle}>Category <span className="text-red-500">*</span></label>
               <select name="category" value={category} onChange={(e) => setCategory(e.target.value)} required className={inputStyle}>
-                <option value="">Select...</option>
+                <option value="">Select Category...</option>
                 <option value="Bus Driver">Bus Driver</option>
                 <option value="Trailer Driver">Trailer Driver</option>
                 <option value="Mechanics">Mechanics</option>
                 <option value="Others">Others</option>
               </select>
               {category === "Others" && (
-                <input type="text" name="categoryOther" placeholder="Specify category" className={`mt-2 ${inputStyle}`} required />
+                <input type="text" name="categoryOther" placeholder="Specify category" className={`mt-3 ${inputStyle}`} required />
               )}
             </div>
             <div>
               <label className={labelStyle}>Country Preferred <span className="text-red-500">*</span></label>
               <select name="countryPreferred" value={countryPreferred} onChange={(e) => setCountryPreferred(e.target.value)} required className={inputStyle}>
-                <option value="">Select...</option>
-                <option value="Latvia">Latvia</option>
-                <option value="Romania">Romania</option>
-                <option value="Croatia">Croatia</option>
-                <option value="Others">Others</option>
+                <option value="">Select Country...</option>
+                {COUNTRY_LIST.map((country) => (
+                  <option key={`pref-${country}`} value={country}>{country}</option>
+                ))}
               </select>
-              {countryPreferred === "Others" && (
-                <input type="text" name="countryOther" placeholder="Specify country" className={`mt-2 ${inputStyle}`} required />
+              {countryPreferred === "Other" && (
+                <input type="text" name="countryOther" placeholder="Specify country" className={`mt-3 ${inputStyle}`} required />
               )}
             </div>
           </div>
@@ -218,86 +408,134 @@ export default function NewLeadPage() {
 
         {/* 2. CLIENT INFORMATION */}
         <div className={sectionStyle}>
-          <div className="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
-            <h2 className="text-lg font-bold text-slate-800">2. Client Information</h2>
+          <div className={sectionAccent}></div>
+          <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-6">
+            <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">👤 2. Client Information</h2>
             {isOver50 && (
-              <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold animate-pulse">
+              <span className="bg-red-100 text-red-700 px-4 py-1.5 rounded-full text-xs font-black tracking-wider animate-pulse border border-red-200 shadow-sm">
                 ⚠️ OVER 50 YEARS OLD
               </span>
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div><label className={labelStyle}>Given Name <span className="text-red-500">*</span></label><input type="text" name="givenName" required className={inputStyle} /></div>
-            <div><label className={labelStyle}>Surname <span className="text-red-500">*</span></label><input type="text" name="surname" required className={inputStyle} /></div>
-            <div><label className={labelStyle}>Father's Name</label><input type="text" name="fatherName" className={inputStyle} /></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div><label className={labelStyle}>Given Name <span className="text-red-500">*</span></label><input type="text" name="givenName" required className={inputStyle} placeholder="First Name" /></div>
+            <div><label className={labelStyle}>Surname <span className="text-red-500">*</span></label><input type="text" name="surname" required className={inputStyle} placeholder="Last Name" /></div>
+            <div><label className={labelStyle}>Father's Name</label><input type="text" name="fatherName" className={inputStyle} placeholder="Optional" /></div>
             
             <div>
               <label className={labelStyle}>Date of Birth <span className="text-red-500">*</span></label>
               <div className="flex gap-3">
                 <input type="date" name="dob" required className={inputStyle} value={dob} onChange={(e) => setDob(e.target.value)} />
-                <div className="w-24 bg-slate-100 border border-slate-300 rounded-lg flex items-center justify-center font-bold text-slate-600">
+                <div className="w-24 shrink-0 bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-center font-black text-slate-500 shadow-inner">
                   {age !== null ? `${age} yrs` : 'Age'}
                 </div>
               </div>
             </div>
 
+            {/* 📱 COMBINED PHONE INPUT */}
             <div>
-              <label className={labelStyle}>Phone Number (UAE) <span className="text-red-500">*</span></label>
-              <input 
-                type="text" 
-                name="callingNumber" 
-                required 
-                className={inputStyle} 
-                onChange={(e) => setFormDataTracker({...formDataTracker, callingNumber: e.target.value})}
-              />
+              <label className={labelStyle}>Phone Number <span className="text-red-500">*</span></label>
+              <div className="flex focus-within:ring-2 focus-within:ring-blue-500/40 rounded-xl shadow-sm transition-all duration-200">
+                <select 
+                  name="phoneCode"
+                  value={phoneCode} 
+                  onChange={(e) => setPhoneCode(e.target.value)}
+                  className="bg-slate-100 border border-slate-200 text-slate-700 text-sm font-bold rounded-l-xl px-3 outline-none border-r-0 cursor-pointer hover:bg-slate-200 transition-colors w-[140px] truncate"
+                >
+                  {COUNTRY_CODES.map((c, index) => <option key={`ph-${index}`} value={c.code}>{c.label}</option>)}
+                </select>
+                <input 
+                  type="text" 
+                  name="phoneBody"
+                  value={phoneBody}
+                  onChange={(e) => setPhoneBody(e.target.value)}
+                  required 
+                  placeholder="50 123 4567"
+                  className="flex-1 p-3 bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-r-xl outline-none focus:bg-white transition-colors" 
+                />
+              </div>
             </div>
-            <div><label className={labelStyle}>WhatsApp Number</label><input type="text" name="whatsappNumber" className={inputStyle} /></div>
-            <div><label className={labelStyle}>Email Address</label><input type="email" name="email" className={inputStyle} /></div>
-            <div><label className={labelStyle}>Nationality <span className="text-red-500">*</span></label><input type="text" name="nationality" required className={inputStyle} /></div>
+
+            {/* 📱 COMBINED WHATSAPP INPUT */}
+            <div>
+              <label className={labelStyle}>WhatsApp Number</label>
+              <div className="flex focus-within:ring-2 focus-within:ring-emerald-500/40 rounded-xl shadow-sm transition-all duration-200">
+                <select 
+                  name="waCode"
+                  value={waCode} 
+                  onChange={(e) => setWaCode(e.target.value)}
+                  className="bg-slate-100 border border-slate-200 text-slate-700 text-sm font-bold rounded-l-xl px-3 outline-none border-r-0 cursor-pointer hover:bg-slate-200 transition-colors w-[140px] truncate"
+                >
+                  {COUNTRY_CODES.map((c, index) => <option key={`wa-${index}`} value={c.code}>{c.label}</option>)}
+                </select>
+                <input 
+                  type="text" 
+                  name="waBody"
+                  value={waBody}
+                  onChange={(e) => setWaBody(e.target.value)}
+                  placeholder="50 123 4567"
+                  className="flex-1 p-3 bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-r-xl outline-none focus:bg-white transition-colors" 
+                />
+              </div>
+            </div>
+
+            <div><label className={labelStyle}>Email Address</label><input type="email" name="email" className={inputStyle} placeholder="john@example.com" /></div>
+            <div>
+              <label className={labelStyle}>Nationality <span className="text-red-500">*</span></label>
+              <select name="nationality" required className={inputStyle}>
+                <option value="">Select Nationality...</option>
+                {COUNTRY_LIST.map((country) => (
+                  <option key={`nat-${country}`} value={country}>{country}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
         {/* 3. EXPERIENCE & AGENCY HISTORY */}
         <div className={sectionStyle}>
-          <h2 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-3 mb-4">3. Experience & Agency History</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div><label className={labelStyle}>Home Country Exp (Years)</label><input type="number" name="experienceHome" min="0" max="50" className={inputStyle} /></div>
-            <div><label className={labelStyle}>GCC Exp (Years)</label><input type="number" name="experienceGCC" min="0" max="50" className={inputStyle} /></div>
+          <div className={sectionAccent}></div>
+          <h2 className="text-xl font-black text-slate-800 border-b border-slate-100 pb-4 mb-6 flex items-center gap-2">
+            💼 3. Experience & Agency History
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div><label className={labelStyle}>Home Country Exp (Years)</label><input type="number" name="experienceHome" min="0" max="50" className={inputStyle} placeholder="0" /></div>
+            <div><label className={labelStyle}>GCC Exp (Years)</label><input type="number" name="experienceGCC" min="0" max="50" className={inputStyle} placeholder="0" /></div>
             
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+            <div className="p-5 bg-slate-50 border border-slate-200 rounded-xl hover:border-blue-300 transition-colors">
               <label className={labelStyle}>Previous Agency Applied?</label>
-              <div className="flex gap-4 mb-2">
-                <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-700">
-                  <input type="radio" name="hasAgency" onChange={() => setHasPreviousAgency(true)} className="w-4 h-4 text-blue-600" /> Yes
+              <div className="flex gap-6 mt-3">
+                <label className="flex items-center gap-2 cursor-pointer text-sm font-bold text-slate-700 hover:text-blue-600 transition-colors">
+                  <input type="radio" name="hasAgency" onChange={() => setHasPreviousAgency(true)} className="w-4 h-4 text-blue-600 focus:ring-blue-500" /> Yes
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-700">
-                  <input type="radio" name="hasAgency" defaultChecked onChange={() => setHasPreviousAgency(false)} className="w-4 h-4 text-blue-600" /> No
+                <label className="flex items-center gap-2 cursor-pointer text-sm font-bold text-slate-700 hover:text-blue-600 transition-colors">
+                  <input type="radio" name="hasAgency" defaultChecked onChange={() => setHasPreviousAgency(false)} className="w-4 h-4 text-blue-600 focus:ring-blue-500" /> No
                 </label>
               </div>
               {hasPreviousAgency && (
-                <div className="mt-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <input type="text" name="previousAgency" required className={inputStyle} placeholder="Enter agency name..." />
+                <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <input type="text" name="previousAgency" required className={inputStyle} placeholder="Enter previous agency name..." />
                 </div>
               )}
             </div>
 
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+            <div className="p-5 bg-slate-50 border border-slate-200 rounded-xl hover:border-blue-300 transition-colors">
               <label className={labelStyle}>Previous Country Applied?</label>
-              <div className="flex gap-4 mb-2">
-                <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-700">
-                  <input type="radio" name="hasCountry" onChange={() => setHasPreviousCountry(true)} className="w-4 h-4 text-blue-600" /> Yes
+              <div className="flex gap-6 mt-3">
+                <label className="flex items-center gap-2 cursor-pointer text-sm font-bold text-slate-700 hover:text-blue-600 transition-colors">
+                  <input type="radio" name="hasCountry" onChange={() => setHasPreviousCountry(true)} className="w-4 h-4 text-blue-600 focus:ring-blue-500" /> Yes
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-slate-700">
-                  <input type="radio" name="hasCountry" defaultChecked onChange={() => setHasPreviousCountry(false)} className="w-4 h-4 text-blue-600" /> No
+                <label className="flex items-center gap-2 cursor-pointer text-sm font-bold text-slate-700 hover:text-blue-600 transition-colors">
+                  <input type="radio" name="hasCountry" defaultChecked onChange={() => setHasPreviousCountry(false)} className="w-4 h-4 text-blue-600 focus:ring-blue-500" /> No
                 </label>
               </div>
               {hasPreviousCountry && (
-                <div className="mt-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-200">
                   <select name="previousCountry" required className={inputStyle}>
                     <option value="">Select a country...</option>
                     {COUNTRY_LIST.map((country) => (
-                      <option key={country} value={country}>{country}</option>
+                      <option key={`prev-${country}`} value={country}>{country}</option>
                     ))}
                   </select>
                 </div>
@@ -306,129 +544,26 @@ export default function NewLeadPage() {
           </div>
         </div>
 
-        {/* 4. DOCUMENTS & ID DETAILS (Auto-Sync Format) */}
-        <div className="bg-blue-50/50 p-6 rounded-xl shadow-sm border border-blue-100 mb-6">
-          <h2 className="text-lg font-bold text-blue-900 border-b border-blue-100 pb-3 mb-4 flex justify-between items-center">
-            <span>🗂️ 4. ID Details & Expirations</span>
-            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-100 border border-emerald-200 px-2 py-1 rounded">Vault Auto-Sync Enabled</span>
-          </h2>
-          
-          <div className="space-y-4">
-            <div className="p-4 bg-white rounded-lg border border-slate-200">
-              <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
-                <label className="font-bold text-slate-700">1. DRIVING LICENCE</label>
-                <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-3 py-1 rounded-full">Pending Upload</span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-2">
-                <div><label className="text-xs text-slate-500">DL Number</label><input type="text" name="dlNumber" className={inputStyle} /></div>
-                <div><label className="text-xs text-slate-500">Issue Date</label><input type="date" name="dlIssueDate" className={inputStyle} /></div>
-                <div><label className="text-xs text-slate-500">Expiry Date</label><input type="date" name="dlExpiry" className={inputStyle} /></div>
-              </div>
-            </div>
-
-            <div className="p-4 bg-white rounded-lg border border-slate-200">
-              <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
-                <label className="font-bold text-slate-700">2. RESIDENT ID</label>
-                <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-3 py-1 rounded-full">Pending Upload</span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-2">
-                <div><label className="text-xs text-slate-500">ID Number</label><input type="text" name="residentIdNum" className={inputStyle} /></div>
-                <div><label className="text-xs text-slate-500">Issue Date</label><input type="date" name="residentIdIssueDate" className={inputStyle} /></div>
-                <div><label className="text-xs text-slate-500">Expiry Date</label><input type="date" name="residentIdExp" className={inputStyle} /></div>
-              </div>
-            </div>
-
-            <div className="p-4 bg-white rounded-lg border border-slate-200">
-              <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
-                <label className="font-bold text-slate-700">3. PASSPORT</label>
-                <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-3 py-1 rounded-full">Pending Upload</span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-2">
-                <div>
-                  <label className="text-xs text-slate-500">Passport Number</label>
-                  <input 
-                    type="text" 
-                    name="passportNum" 
-                    className={inputStyle} 
-                    onChange={(e) => setFormDataTracker({...formDataTracker, passportNum: e.target.value})}
-                  />
-                </div>
-                <div><label className="text-xs text-slate-500">Issue Date</label><input type="date" name="passportIssueDate" className={inputStyle} /></div>
-                <div><label className="text-xs text-slate-500">Expiry Date</label><input type="date" name="passportExpiry" className={inputStyle} /></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-{/* 5. SALES PROCESSING & FINANCIALS */}
-        <div className="bg-blue-50/30 p-6 rounded-xl shadow-sm border border-blue-200 mb-6">
-          <h2 className="text-lg font-bold text-blue-900 border-b border-blue-200 pb-3 mb-5 flex items-center gap-2">
-            💰 5. Sales Processing & Scheduling
-          </h2>
-
-          {/* FEEDBACK STATUS */}
-          <div className="mb-6 bg-white p-4 rounded-lg border border-blue-100 shadow-sm">
-            <label className="block text-sm font-bold text-blue-800 uppercase tracking-wider mb-3">⭐ Feedback / Conversion Status</label>
-            <div className="flex flex-col md:flex-row gap-4">
-              <select 
-                name="feedbackStatus" 
-                value={feedbackSelect}
-                onChange={(e) => setFeedbackSelect(e.target.value)}
-                className={`${inputStyle} w-full md:w-1/3 border-blue-300 font-semibold bg-blue-50/50`}
-              >
-                <option value="">Pending Update...</option>
-                {FEEDBACK_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                <option value="Others">Others (Custom)</option>
-              </select>
-              {feedbackSelect === "Others" && (
-                <div className="w-full md:w-2/3 animate-in fade-in zoom-in-95 duration-200">
-                  <input type="text" name="feedbackStatusOther" placeholder="Type custom status here..." className={`${inputStyle} border-blue-300 font-semibold`} required />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* INITIAL TEST FEES */}
-          <div className="mb-6">
-            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Initial Test Record</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-white p-4 rounded-lg border border-blue-100 shadow-sm">
-              <div><label className={labelStyle}>Test Date</label><input type="date" name="testDate" className={inputStyle} /></div>
-              <div><label className={labelStyle}>Test Fees (AED)</label><input type="number" step="0.01" name="testFeesAmount" placeholder="0.00" className={inputStyle} /></div>
-              <div><label className={labelStyle}>Invoice No.</label><input type="text" name="invoiceNumber" placeholder="INV-XXX" className={inputStyle} /></div>
-              <div><label className={labelStyle}>Payment Date</label><input type="date" name="paymentDate" className={inputStyle} /></div>
-            </div>
-            <p className="text-[10px] text-slate-500 mt-2 pl-1 font-medium">Note: System will auto-book slot date as "Today" when test date is provided.</p>
-          </div>
-
-          {/* SERVICE AGREEMENT FEES */}
-          <div className="mb-6">
-            <h3 className="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-2">Service Agreement Fees</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-emerald-50/50 p-4 rounded-lg border border-emerald-200 shadow-sm">
-              <div><label className={labelStyle}>Agreement Fee (AED)</label><input type="number" step="0.01" name="serviceAgreementAmount" placeholder="0.00" className={inputStyle} /></div>
-              <div><label className={labelStyle}>Invoice No.</label><input type="text" name="serviceAgreementInvoice" placeholder="INV-XXX" className={inputStyle} /></div>
-              <div><label className={labelStyle}>Payment Date</label><input type="date" name="serviceAgreementPaymentDate" className={inputStyle} /></div>
-            </div>
-          </div>
-        </div>
-        
-        {/* 6. FOLLOW-UPS & REMARKS */}
+        {/* 4. FOLLOW-UPS & REMARKS */}
         <div className={sectionStyle}>
-          <h2 className="text-lg font-bold text-slate-800 border-b border-slate-100 pb-3 mb-4 flex items-center gap-2">
-            💭 6. Follow-Ups & Notes
+          <div className={sectionAccent}></div>
+          <h2 className="text-xl font-black text-slate-800 border-b border-slate-100 pb-4 mb-6 flex items-center gap-2">
+            💭 4. Follow-Ups & Notes
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5 bg-slate-50 p-5 rounded-lg border border-slate-100">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 bg-slate-50 p-6 rounded-xl border border-slate-200">
             <div><label className={labelStyle}>Last Call Date</label><input type="date" name="lastCallDate" className={inputStyle} /></div>
             <div><label className={labelStyle}>Next Follow-up Date</label><input type="date" name="followUpDate" className={inputStyle} /></div>
-            <div className="md:col-span-2"><label className={labelStyle}>Follow-up Remarks</label><input type="text" name="followUpRemarks" placeholder="Quick follow-up notes..." className={inputStyle} /></div>
+            <div className="md:col-span-2"><label className={labelStyle}>Quick Follow-up Remark</label><input type="text" name="followUpRemarks" placeholder="Brief note on the last call..." className={inputStyle} /></div>
           </div>
 
           <div>
             <label className={labelStyle}>Primary Sales Remarks</label>
-            <textarea name="salesRemarks" rows={4} placeholder="Detailed sales notes and client context..." className={inputStyle}></textarea>
+            <textarea name="salesRemarks" rows={4} placeholder="Detailed sales notes, client context, requirements, etc..." className={inputStyle}></textarea>
           </div>
         </div>
 
-        <div className="flex justify-end gap-3">
+        {/* SUBMIT ACTIONS */}
+        <div className="flex justify-end gap-4 mt-10">
           <button 
             type="button" 
             id="cancel-button"
@@ -436,18 +571,25 @@ export default function NewLeadPage() {
               if (isDirty && !window.confirm("You have unsaved changes. Are you sure you want to cancel?")) return;
               router.push("/sales/leads");
             }} 
-            className="px-6 py-2.5 rounded-lg font-medium text-slate-600 bg-white border border-slate-300 hover:bg-slate-50"
+            className="px-8 py-3.5 rounded-xl font-bold text-slate-600 bg-white border-2 border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm"
           >
             Cancel
           </button>
           <button 
             type="submit" 
             disabled={loading || duplicateAlert !== null} 
-            className={`px-8 py-2.5 rounded-lg font-bold text-white shadow-sm ${
-              loading || duplicateAlert ? "bg-slate-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+            className={`px-10 py-3.5 rounded-xl font-black text-white transition-all transform hover:-translate-y-0.5 shadow-md ${
+              loading || duplicateAlert 
+                ? "bg-slate-400 cursor-not-allowed shadow-none translate-y-0" 
+                : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 hover:shadow-lg"
             }`}
           >
-            {loading ? "Creating..." : "Save & Create Lead"}
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                Creating Lead...
+              </span>
+            ) : "Save"}
           </button>
         </div>
       </form>

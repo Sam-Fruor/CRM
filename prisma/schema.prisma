@@ -86,10 +86,10 @@ model Lead {
   residentIdNum    String?
   residentIdExp    DateTime?
   homeCountryNumber String?
-  experienceHome    Int?
-  experienceGCC     Int?
-  previousAgency    String?
-  previousCountry   String?
+  experienceHome   Int?
+  experienceGCC    Int?
+  previousAgency   String?
+  previousCountry  String?
   homeAddress      String?
   companyAddress   String?
   passportIssueDate   DateTime?
@@ -100,63 +100,142 @@ model Lead {
   // STAGE 1: SALES PROCESSING
   // ----------------------------------------------------
   feedbackStatus   String?  // Converted, Not Responding, Not Eligible, etc.
-  salesRemarks     String?
+  salesRemarks     String?  @db.Text
 
   // ----------------------------------------------------
   // STAGE 2: OPERATIONS & HR PROCESSING
   // ----------------------------------------------------
   caseStatus       String   @default("Stage 1 Under Process")
+  opsLastActionDate    DateTime?
+  opsNextFollowUpDate  DateTime?
   
   // Payment Details
-  testFeesAmount          Float?
-  totalPayment            Float?
+  testFeesAmount         Float?
+  totalPayment           Float?
   serviceAgreementPending Float?
   jobOfferPending         Float?
   workPermitPending       Float?
   insurancePending        Float?
   schoolFeesPending       Float?
   flightTicketPending     Float? // From HR view
+  otherPending            Float? // Misc
   invoiceNumber           String?
-  reTestFeesAmount            Float?
-  reTestDate                  DateTime?
-  reTestTotalPayment          Float?
-  reTestInvoiceNumber         String? 
-  reTestPaymentDate           DateTime?
+  testFeeRemarks          String?    @db.Text 
+  
+  reTestFeesAmount        Float?
+  reTestDate              DateTime?
+  reTestTotalPayment      Float?
+  reTestInvoiceNumber     String? 
+  reTestPaymentDate       DateTime?
+  reTestFeeRemarks        String?    @db.Text 
+  
   serviceAgreementAmount      Float?
   serviceAgreementInvoice     String?
   serviceAgreementTotal       Float?
   serviceAgreementPaymentDate DateTime?
+  saFeeRemarks                String?    @db.Text 
+  
   paymentDate             DateTime?
-  // 🔐 Payment Verification Gates
+  
+  // 🔐 Payment Verification Gates (Sales)
   testFeeVerifyStatus       String  @default("Unsubmitted")
-  testFeeRejectReason       String? // 👈 ADD THIS
+  testFeeRejectReason       String? 
+  testFeeApproveRemark      String? @db.Text // 👈 NEW
   
   reTestFeeVerifyStatus     String  @default("Unsubmitted")
-  reTestFeeRejectReason     String? // 👈 ADD THIS
+  reTestFeeRejectReason     String? 
+  reTestFeeApproveRemark    String? @db.Text // 👈 NEW
   
   saFeeVerifyStatus         String  @default("Unsubmitted")
-  saFeeRejectReason         String? // 👈 ADD THIS
+  saFeeRejectReason         String? 
+  saFeeApproveRemark        String? @db.Text // 👈 NEW
+
+  // ----------------------------------------------------
+  // ⚙️ OPERATIONS PAYMENT VERIFICATION TRACKING 
+  // ----------------------------------------------------
+  jobOfferPaymentDate       DateTime?
+  jobOfferPaymentRemarks    String?   @db.Text
+  jobOfferInvoice           String?
+  jobOfferVerifyStatus      String    @default("Unsubmitted")
+  jobOfferRejectReason      String?
+  jobOfferApproveRemark     String?   @db.Text // 👈 NEW
+
+  workPermitPaymentDate     DateTime?
+  workPermitPaymentRemarks  String?   @db.Text
+  workPermitInvoice         String?
+  workPermitVerifyStatus    String    @default("Unsubmitted")
+  workPermitRejectReason    String?
+  workPermitApproveRemark   String?   @db.Text // 👈 NEW
+
+  insurancePaymentDate      DateTime?
+  insurancePaymentRemarks   String?   @db.Text
+  insuranceInvoice          String?
+  insuranceVerifyStatus     String    @default("Unsubmitted")
+  insuranceRejectReason     String?
+  insuranceApproveRemark    String?   @db.Text // 👈 NEW
+
+  schoolFeesPaymentDate     DateTime?
+  schoolFeesPaymentRemarks  String?   @db.Text
+  schoolFeesInvoice         String?
+  schoolFeesVerifyStatus    String    @default("Unsubmitted")
+  schoolFeesRejectReason    String?
+  schoolFeesApproveRemark   String?   @db.Text // 👈 NEW
+
+  flightTicketPaymentDate     DateTime?
+  flightTicketPaymentRemarks  String?   @db.Text
+  flightTicketInvoice         String?
+  flightTicketVerifyStatus    String    @default("Unsubmitted")
+  flightTicketRejectReason    String?
+  flightTicketApproveRemark   String?   @db.Text // 👈 NEW
+
+  otherPendingPaymentDate     DateTime?
+  otherPendingPaymentRemarks  String?   @db.Text
+  otherPendingInvoice         String?
+  otherPendingVerifyStatus    String    @default("Unsubmitted")
+  otherPendingRejectReason    String?
+  otherPendingApproveRemark   String?   @db.Text // 👈 NEW
 
   // ♾️ DYNAMIC PAYMENTS LEDGER
-  otherPayments               Json      @default("[]") // 👈 ADD THIS!
+  otherPayments             Json      @default("[]") 
 
-  // Follow-up Details
+  // ----------------------------------------------------
+  // FOLLOW-UP DETAILS (TAB-SPECIFIC)
+  // ----------------------------------------------------
+  // Profile Tab (Default)
   lastCallDate      DateTime?
   followUpDate      DateTime?
   followUpRemarks   String?    @db.Text
-  lastEmailDate     DateTime?
-  hrNextFollowUpDate  DateTime?
-  hrRemarks         String?    @db.Text
-  opsRemarks        String?    @db.Text
+
+  // Documents Tab
+  documentsLastCallDate      DateTime?
+  documentsFollowUpDate      DateTime?
+  documentsFollowUpRemarks   String?    @db.Text
+  documentsSalesRemarks      String?    @db.Text
+
+  // Testing Tab
+  testingLastCallDate        DateTime?
+  testingFollowUpDate        DateTime?
+  testingFollowUpRemarks     String?    @db.Text
+  testingSalesRemarks        String?    @db.Text
+
+  // Service Agreement Tab
+  saLastCallDate             DateTime?
+  saFollowUpDate             DateTime?
+  saFollowUpRemarks          String?    @db.Text
+  saSalesRemarks             String?    @db.Text
+
+  // HR & Ops Remarks
+  lastEmailDate      DateTime?
+  hrNextFollowUpDate DateTime?
+  hrRemarks          String?    @db.Text
+  opsRemarks         String?    @db.Text
 
   // ----------------------------------------------------
   // DOCUMENTS (Operations & HR)
   // ----------------------------------------------------
-  // Using JSON is the most scalable way to store checklists and URLs 
-  // without creating 40+ individual database columns.
-  documentStatus    Json     @default("{}") // e.g., { passportPending: true, cvUploaded: true }
-  documentFiles     Json     @default("{}") // e.g., { passportUrl: "https://...", cvUrl: "https://..." }
-  documentChecklist     Json     @default("{}")
+  documentStatus    Json     @default("{}") 
+  documentFiles     Json     @default("{}") 
+  documentChecklist Json     @default("{}")
 
   // ----------------------------------------------------
   // STAGE 3: EXAMINER
@@ -195,10 +274,10 @@ model ActivityLog {
 
 model Notification {
   id        String   @id @default(cuid())
-  userId    String   // The user receiving the alert
+  userId    String   
   title     String
   message   String
-  link      String?  // The URL to jump to (e.g., the lead's profile)
+  link      String?  
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
 
@@ -210,12 +289,11 @@ model TestEvaluation {
   leadId            String
   lead              Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
   
-  // Detailed Historical Records
   englishScore      Int?
   englishTestResult String?
   drivingScore      Int?
   yardTestResult    String?
-  status            String   // Approved or Denied
+  status            String   
   remarks           String?  @db.Text
   
   createdAt         DateTime @default(now())

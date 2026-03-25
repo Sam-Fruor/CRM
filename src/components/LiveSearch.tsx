@@ -14,20 +14,25 @@ export default function LiveSearch({
   const searchParams = useSearchParams();
   
   // Automatically grab the initial search term from the URL (if any)
-  const initialSearch = searchParams.get("search") || "";
-  const [searchTerm, setSearchTerm] = useState(initialSearch);
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "");
   
   const isInitialMount = useRef(true);
 
+  // 🔄 FIX: Unconditionally sync the input to the URL whenever the URL changes.
+  // This completely eliminates the "two-click" stale state bug!
   useEffect(() => {
-    // Skip the first render so it doesn't accidentally clear an existing URL search
+    const currentUrlSearch = searchParams.get("search") || "";
+    setSearchTerm(currentUrlSearch);
+  }, [searchParams]);
+
+  useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
     }
 
     const delayDebounceFn = setTimeout(() => {
-      // 🧠 SMART URL BUILDER: Grabs ALL existing URL parameters (like ?view=waiting or ?filter=leads)
+      // 🧠 SMART URL BUILDER: Grabs ALL existing URL parameters
       const params = new URLSearchParams(searchParams.toString());
       
       if (searchTerm) {
@@ -41,7 +46,7 @@ export default function LiveSearch({
     }, 300);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchTerm, pathname, router, searchParams]);
+  }, [searchTerm, pathname, router]);
 
   return (
     <div className="relative flex items-center w-full md:w-auto">

@@ -16,7 +16,6 @@ export async function processAgreement(leadId: string, formData: FormData) {
   await prisma.lead.update({
     where: { id: leadId },
     data: {
-      // Use your existing schema field to track what Ops needs to collect!
       serviceAgreementPending: enrollmentAmount, 
       caseStatus: "Stage 2: Ops - Welcome & Docs", // 🏓 PING TO OPS!
       activities: {
@@ -43,7 +42,6 @@ export async function processJobOffer(leadId: string, formData: FormData) {
   await prisma.lead.update({
     where: { id: leadId },
     data: {
-      // Use your existing schema field!
       jobOfferPending: jobOfferPending,
       caseStatus: "Stage 2: Ops - Collect Job Offer Payment", // 🏓 PING TO OPS!
       activities: {
@@ -70,7 +68,6 @@ export async function processWorkPermit(leadId: string, formData: FormData) {
   await prisma.lead.update({
     where: { id: leadId },
     data: {
-      // Use your existing schema field!
       workPermitPending: workPermitPending,
       caseStatus: "Stage 2: Ops - Collect WP Payment", // 🏓 PING TO OPS!
       activities: {
@@ -87,10 +84,7 @@ export async function processWorkPermit(leadId: string, formData: FormData) {
   revalidatePath(`/hr/${leadId}`);
 }
 
-// Add to src/app/actions/hrActions.ts
-
-// src/app/actions/hrActions.ts
-
+// MASTER UPDATE HR FILE ROUTINE
 export async function updateHRFile(leadId: string, formData: FormData) {
   const session = await getServerSession(authOptions);
   if (!session || !["HR", "MANAGEMENT", "ADMIN"].includes(session.user.role)) {
@@ -111,17 +105,15 @@ export async function updateHRFile(leadId: string, formData: FormData) {
 
   const newStatus = formData.get("caseStatus") as string;
 
-  // 1. Fetch existing lead to check if the status ACTUALLY changed
   const existingLead = await prisma.lead.findUnique({
     where: { id: leadId },
-    select: { caseStatus: true, updatedAt: true } // 👈 Add updatedAt here
+    select: { caseStatus: true, updatedAt: true, otherPayments: true } 
   });
 
   let activityTitle = "HR Profile Updated";
   let activityMessage = "HR updated the client's profile data or financial ledger.";
 
   if (existingLead && existingLead.caseStatus !== newStatus) {
-    // ⏳ SLA TIMER CALCULATION
     const msSpent = Date.now() - existingLead.updatedAt.getTime();
     const daysSpent = Math.floor(msSpent / (1000 * 60 * 60 * 24));
     const timeText = daysSpent === 0 ? "less than a day" : `${daysSpent} days`;
@@ -130,17 +122,46 @@ export async function updateHRFile(leadId: string, formData: FormData) {
     activityMessage = `HR moved the file to "${newStatus}". (File spent ${timeText} in "${existingLead.caseStatus}").`;
   }
 
+  // 🚀 2. PARSE DYNAMIC CUSTOM PAYMENTS (WITH STRICT BACKEND LOCKING)
+  const customPaymentIds = formData.getAll("customPaymentIds") as string[];
+  const existingOtherPayments = Array.isArray(existingLead?.otherPayments) 
+    ? existingLead!.otherPayments 
+    : JSON.parse((existingLead?.otherPayments as any) || "[]");
+  
+  // 🔒 BACKEND PROTECTION: Find any approved payments that were accidentally/maliciously deleted from the UI
+  const forcedPreservedPayments = existingOtherPayments.filter((ep: any) => 
+    ep.status === 'Approved' && !customPaymentIds.includes(ep.id)
+  );
+
+  const updatedOtherPayments = customPaymentIds.map(id => {
+    const existing = existingOtherPayments.find((ep: any) => ep.id === id) || {};
+    
+    // 🔒 BACKEND PROTECTION: If it's already approved, completely ignore the form data and keep it locked!
+    if (existing.status === 'Approved') {
+      return existing; 
+    }
+
+    return {
+      ...existing,
+      id,
+      name: formData.get(`customName_${id}`) as string,
+      amount: parseFloatSafe(formData.get(`customAmount_${id}`)),
+      status: existing.status || "Unsubmitted"
+    };
+  });
+
+  const finalOtherPayments = [...forcedPreservedPayments, ...updatedOtherPayments];
+
   // 3. Update the Database
   await prisma.lead.update({
     where: { id: leadId },
     data: {
       caseStatus: newStatus,
       
-      // Save Core Profile Edits
       givenName: formData.get("givenName") as string,
       surname: formData.get("surname") as string,
       fatherName: formData.get("fatherName") as string, 
-      dlNumber: formData.get("dlNumber") as string, // 👈 FIXED to match schema
+      dlNumber: formData.get("dlNumber") as string, 
       dob: parseDate(formData.get("dob")),
       nationality: formData.get("nationality") as string,
       passportNum: formData.get("passportNum") as string,
@@ -151,7 +172,7 @@ export async function updateHRFile(leadId: string, formData: FormData) {
       whatsappNumber: formData.get("whatsappNumber") as string,
       email: formData.get("email") as string,
       
-      // Payments
+      // Payments Tracker (Read the UI values. Since the UI locks them to readOnly, it submits the safe existing value).
       testFeesAmount: parseFloatSafe(formData.get("testFeesAmount")),
       totalPayment: parseFloatSafe(formData.get("totalPayment")),
       serviceAgreementPending: parseFloatSafe(formData.get("serviceAgreementPending")),
@@ -160,13 +181,15 @@ export async function updateHRFile(leadId: string, formData: FormData) {
       insurancePending: parseFloatSafe(formData.get("insurancePending")),
       schoolFeesPending: parseFloatSafe(formData.get("schoolFeesPending")),
       flightTicketPending: parseFloatSafe(formData.get("flightTicketPending")),
+      otherPending: parseFloatSafe(formData.get("otherPending")),
+      
+      // 🚀 INJECT THE NEWLY ASSEMBLED AND SECURED CUSTOM PAYMENTS ARRAY
+      otherPayments: finalOtherPayments,
 
-      // Tracking & Remarks
       lastEmailDate: parseDate(formData.get("lastEmailDate")),
       hrNextFollowUpDate: parseDate(formData.get("hrNextFollowUpDate")),
       hrRemarks: formData.get("hrRemarks") as string,
 
-      // Insert the SMART message!
       activities: {
         create: {
           userId: session.user.id,
@@ -180,9 +203,8 @@ export async function updateHRFile(leadId: string, formData: FormData) {
   revalidatePath("/hr");
   revalidatePath(`/hr/verification`);
   revalidatePath(`/hr/${leadId}`);
+  revalidatePath(`/operations/verification`);
 }
-
-// Add this to the bottom of src/app/actions/hrActions.ts
 
 export async function saveDocumentRecord(leadId: string, docName: string, fileUrl: string) {
   const session = await getServerSession(authOptions);
@@ -216,8 +238,6 @@ export async function saveDocumentRecord(leadId: string, docName: string, fileUr
 
   revalidatePath(`/hr/${leadId}`);
 }
-
-// Add this to the bottom of src/app/actions/hrActions.ts
 
 export async function saveMultipleDocuments(leadId: string, newDocs: Record<string, string>) {
   const session = await getServerSession(authOptions);

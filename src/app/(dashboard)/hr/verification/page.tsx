@@ -1,3 +1,4 @@
+// src/app/(dashboard)/hr/verification/page.tsx
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -152,7 +153,7 @@ export default async function HRVerificationQueue({ searchParams }: { searchPara
                                 </td>
                                 <td className="p-4"><span className="px-3 py-1 text-xs font-bold rounded-full bg-blue-100 text-blue-700">{lead.caseStatus}</span></td>
                                 <td className="p-4"><span className="font-bold text-red-600 bg-red-50 px-2 py-1 rounded border border-red-100 text-xs">{new Date(lead.hrNextFollowUpDate!).toLocaleDateString("en-GB")}</span></td>
-                                <td className="p-4 text-right"><Link href={`/hr/${lead.id}?tab=details`} className="px-5 py-2 bg-orange-500 text-white hover:bg-orange-600 text-sm font-bold rounded-lg shadow-sm transition-colors inline-block">Execute Follow-Up</Link></td>
+                                <td className="p-4 text-right"><Link href={`/hr/${lead.id}?tab=hr`} className="px-5 py-2 bg-orange-500 text-white hover:bg-orange-600 text-sm font-bold rounded-lg shadow-sm transition-colors inline-block">Execute Follow-Up</Link></td>
                               </tr>
                             ))}
                           </tbody>
@@ -211,7 +212,7 @@ export default async function HRVerificationQueue({ searchParams }: { searchPara
                                 </td>
                                 <td className="p-4 text-sm text-slate-500 font-medium">{new Date(lead.updatedAt).toLocaleDateString()}</td>
                                 <td className="p-4 text-right">
-                                  <Link href={`/hr/${lead.id}?tab=details`} className="px-5 py-2.5 bg-blue-600 text-white hover:bg-blue-700 text-sm font-bold rounded-lg shadow-sm transition-colors inline-block">
+                                  <Link href={`/hr/${lead.id}?tab=hr`} className="px-5 py-2.5 bg-blue-600 text-white hover:bg-blue-700 text-sm font-bold rounded-lg shadow-sm transition-colors inline-block">
                                     Verify & Process
                                   </Link>
                                 </td>
@@ -275,7 +276,7 @@ export default async function HRVerificationQueue({ searchParams }: { searchPara
                         <td className="p-4"><span className="px-3 py-1 text-xs font-bold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">{lead.caseStatus}</span></td>
                         <td className="p-4 text-sm text-slate-400 font-medium">{new Date(lead.updatedAt).toLocaleDateString()}</td>
                         <td className="p-4 text-right">
-                          <Link href={`/hr/${lead.id}?tab=details`} className="px-5 py-2.5 bg-white border border-slate-300 text-slate-600 hover:bg-slate-50 hover:text-emerald-600 text-sm font-bold rounded-lg transition-colors inline-block">
+                          <Link href={`/hr/${lead.id}?tab=hr`} className="px-5 py-2.5 bg-white border border-slate-300 text-slate-600 hover:bg-slate-50 hover:text-emerald-600 text-sm font-bold rounded-lg transition-colors inline-block">
                             Monitor File
                           </Link>
                         </td>
