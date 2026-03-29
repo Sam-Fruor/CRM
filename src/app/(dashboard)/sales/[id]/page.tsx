@@ -5,6 +5,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import ViewLead from "./ViewLead"; 
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function ViewLeadPage({ 
   params,
   searchParams 

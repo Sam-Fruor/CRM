@@ -1,7 +1,7 @@
 // src/components/layout/Sidebar.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
@@ -33,8 +33,20 @@ export default function Sidebar() {
   const { data: session } = useSession();
   const userRole = session?.user?.role;
   
-  // 🚀 COLLAPSE STATE: Default to false, but allows the user to shrink the sidebar
+  // 🚀 COLLAPSE STATE
   const [isCollapsed, setIsCollapsed] = useState(false);
+
+  // 🚀 AUTO-COLLAPSE LOGIC BASED ON ROUTE
+  useEffect(() => {
+    // These are the root "Dashboard" pages for each portal
+    const mainDashboards = ["/", "/sales", "/hr", "/operations", "/examiner"];
+    
+    if (mainDashboards.includes(pathname)) {
+      setIsCollapsed(false); // Open wide on main dashboards
+    } else {
+      setIsCollapsed(true);  // Automatically shrink on sub-pages (tables, forms, profiles)
+    }
+  }, [pathname]);
 
   const navigation = [
     // ADMIN & MANAGEMENT
@@ -58,6 +70,7 @@ export default function Sidebar() {
     { name: "HR Dashboard", href: "/hr", roles: ["ADMIN", "HR"], group: "Human Resources", icon: <Icons.HR /> },
     { name: "HR Verification", href: "/hr/verification", roles: ["ADMIN", "HR"], group: "Human Resources", icon: <Icons.Shield /> }, 
     { name: "Verify Payments", href: "/hr/payments", roles: ["ADMIN", "HR"], group: "Human Resources", icon: <Icons.Payments /> }, 
+    { name: "Archived Leads", href: "/hr/archived", roles: ["ADMIN", "HR"], group: "Human Resources", icon: <Icons.Payments /> }, 
     
     { name: "Examiner Pending", href: "/examiner", roles: ["ADMIN", "EXAMINER"], group: "Testing & Evaluations", icon: <Icons.Examiner /> },
   ];

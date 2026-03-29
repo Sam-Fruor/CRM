@@ -23,6 +23,9 @@ export async function updateSalesProcessing(leadId: string, formData: FormData) 
   }
   if (!finalFeedbackStatus) finalFeedbackStatus = undefined;
 
+  // 🚀 THE FIX: Grab the caseStatus sent from the TransferBanner
+  const newCaseStatus = formData.get("caseStatus") as string | null;
+
   // 🔎 1. Fetch Existing Data to compare date changes AND verification status
   const existingLead = await prisma.lead.findUnique({ 
     where: { id: leadId }, 
@@ -45,7 +48,7 @@ export async function updateSalesProcessing(leadId: string, formData: FormData) 
   const otherPaymentsData = otherPaymentsJson ? JSON.parse(otherPaymentsJson) : [];
 
   // ==========================================
-  // 🔔 SMART DATE TRACKING & NOTIFICATIONS (ONLY IF ALREADY APPROVED)
+  // 🔔 SMART DATE TRACKING & NOTIFICATIONS
   // ==========================================
   const examiners = await prisma.user.findMany({ where: { role: 'EXAMINER' }, select: { id: true } });
   
@@ -58,6 +61,16 @@ export async function updateSalesProcessing(leadId: string, formData: FormData) 
     details: "Updated profile details, financial ledgers, follow-ups, and synced documents.",
     createdAt: now
   }];
+
+  // 🚀 THE FIX: Log the official HR transfer to the timeline
+  if (newCaseStatus === "Stage 2 Under Process") {
+    newTimelineActivities.push({
+      userId: session.user.id,
+      action: "File Transferred to HR",
+      details: "Sales processing complete. File officially transferred to Stage 2.",
+      createdAt: new Date(now.getTime() + 4000) // Ensure this stays at the very top of the timeline
+    });
+  }
   
   const newNotifications: any[] = [];
 
@@ -66,7 +79,6 @@ export async function updateSalesProcessing(leadId: string, formData: FormData) 
     const actionLabel = "Initial Test Rescheduled";
     const detailText = `Sales rescheduled the Initial Test for ${formatForTimeline(newTestDate)}`;
     
-    // Offset by +1 second to place it on top of the Save action
     newTimelineActivities.push({ userId: session.user.id, action: actionLabel, details: detailText, createdAt: new Date(now.getTime() + 1000) });
     examiners.forEach(ex => newNotifications.push({ userId: ex.id, title: actionLabel, message: `${existingLead?.givenName} ${existingLead?.surname} is rescheduled for ${formatForTimeline(newTestDate)}`, link: `/examiner/${leadId}` }));
   }
@@ -138,6 +150,9 @@ export async function updateSalesProcessing(leadId: string, formData: FormData) 
     prisma.lead.update({
       where: { id: leadId },
       data: {
+        // 🚀 THE FIX: Save the new Case Status to the DB
+        caseStatus: newCaseStatus || undefined,
+
         feedbackStatus: finalFeedbackStatus,
         slotBookingDate: newSlotBookingDate,
         testDate: newTestDate,
